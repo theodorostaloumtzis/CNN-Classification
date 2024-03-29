@@ -115,6 +115,8 @@ def print_train_time(start, end, device=None):
 
     # Convert the total_time to a format hh:mm:ss
     total_time = str(datetime.timedelta(seconds=total_time))
+    # Make seconds integer
+    total_time = total_time.split(".")[0]
     print(f"Training time: {total_time}")
     return total_time
 
@@ -546,9 +548,10 @@ def evaluate(model: torch.nn.Module,
 
 
 # Save the model
-def save_model(module, model_name, acc=None, hyperparameters=None, total_time=None):
+def save_model(module, acc=None, hyperparameters=None, total_time=None):
     # Create the base directory if it doesn't exist
     base_dir = "models"
+    model_name = module.get_name()
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
 
@@ -563,7 +566,7 @@ def save_model(module, model_name, acc=None, hyperparameters=None, total_time=No
             f.write(f"Model: {model_name}\n")
             f.write(f"Accuracy: {acc*100:.2f}%\n")
             f.write("Hyperparameters:\n")
-            f.write(f"Total time: {total_time}\n")
+            f.write(f"Total time: {total_time} hh:mm:ss\n")
             for key, value in hyperparameters.items():
                 f.write(f"{key}: {value}\n")
 

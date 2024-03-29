@@ -64,6 +64,7 @@ class MRI_classification_CNN(nn.Module):
 
     def __init__(self, input_shape: int, hidden_units: int, output_shape: int, size: int):
         super().__init__()
+        self.name = "MRI_classification_CNN"
         self.conv1 = nn.Sequential(
             nn.Conv2d(input_shape, hidden_units * 3, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(hidden_units * 3),
@@ -95,6 +96,9 @@ class MRI_classification_CNN(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc1(x)
         return x
+    
+    def get_name(self):
+        return self.name
 
 
 class ConvBlock(nn.Module):
@@ -154,11 +158,13 @@ class SqueezeExcitation(nn.Module):
 
     def forward(self, x):
         return x * self.se(x)
+    
 
 
 class EfficientNet(nn.Module):
     def __init__(self, model_name, output):
         super(EfficientNet, self).__init__()
+        self.name = f'EfficientNet-{model_name}'
         phi, resolution, dropout = scale_values[model_name]
         self.depth_factor, self.width_factor = alpha ** phi, beta ** phi
         self.last_channels = ceil(1280 * self.width_factor)
@@ -200,3 +206,6 @@ class EfficientNet(nn.Module):
     def forward(self, x):
         x = self.avgpool(self.extractor(x))
         return self.classifier(self.flatten(x))
+    
+    def get_name(self):
+        return self.name

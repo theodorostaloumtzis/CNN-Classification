@@ -3,20 +3,20 @@ from classes import *
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-TRAIN_DIR = 'data/Training'
-TEST_DIR = 'data/Testing'
-BATCH_SIZE = 32
-IN_CHANNELS = 3
+TRAIN_DIR = 'data/Training' # Path to the training directory
+TEST_DIR = 'data/Testing' # Path to the testing directory
+BATCH_SIZE = 16 # Batch size for the dataloaders
+IN_CHANNELS = 3 # Number of input channels
 HIDDEN_UNITS = 16  # Number of hidden units in the fully connected layer
-NUM_CLASSES = 4
-SIZE = 192
-LEARNING_RATE = 0.001
-EPOCHS = 2
-GAMMA = 0.1
-STEP_SIZE = 5
-WEIGHT_DECAY = None
-SEED = 42
-EVAL_EPOCHS = 2
+NUM_CLASSES = 4 # Number of classes in the dataset
+SIZE = 224 # Size of the images
+LEARNING_RATE = 0.001 # Learning rate for the optimizer
+EPOCHS = 20 # Number of epochs to train the model
+GAMMA = 0.1 # Multiplicative factor of learning rate decay
+STEP_SIZE = 5 # Step size for the learning rate scheduler
+WEIGHT_DECAY = None # Weight decay for the optimizer
+SEED = 42 # Seed for reproducibility
+EVAL_EPOCHS = 10  # Number of epochs to evaluate the model on the test set
 
 # Create the dictionary that hold the hyperparameters
 hyperparameters = {
@@ -52,6 +52,7 @@ train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
 from timeit import default_timer as timer
+from cnn import IN_CHANNELS
 
 # Create the model
 model = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(DEVICE)
@@ -77,7 +78,7 @@ total_time = print_train_time(start, end, device=DEVICE)
 # Evaluate the model
 eval_results = evaluate(model, test_loader, criterion, device=DEVICE, eval_epochs=EVAL_EPOCHS)
 
-model_dir = save_model(model, "MRI_classification_CNN", acc=eval_results['test_acc'],
+model_dir = save_model(model, acc=eval_results['test_acc'],
                        hyperparameters=hyperparameters, total_time=total_time)
 
 # Plot the results
