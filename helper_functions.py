@@ -1,28 +1,13 @@
-"""
-A series of helper functions used throughout the course.
-
-If a function gets defined once and could be used over and over, it'll go in here.
-"""
-import pathlib
-
+import datetime
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
-
 from torch import nn
-
 import os
 import zipfile
-
 from pathlib import Path
 from tqdm.auto import tqdm
-
 import requests
-
-# Walk through an image classification directory and find out how many files (images)
-# are in each subdirectory.
-import os
-
 
 def walk_through_dir(dir_path):
     """
@@ -127,7 +112,10 @@ def print_train_time(start, end, device=None):
         float: time between start and end in seconds (higher is longer).
     """
     total_time = end - start
-    print(f"\nTrain time on {device}: {total_time:.3f} seconds")
+
+    # Convert the total_time to a format hh:mm:ss
+    total_time = str(datetime.timedelta(seconds=total_time))
+    print(f"Training time: {total_time}")
     return total_time
 
 
@@ -141,6 +129,7 @@ def plot_loss_curves(results, model_dir=None):
              "train_acc": [...],
              "test_loss": [...],
              "test_acc": [...]}
+        model_dir (str): directory to save the plots, if None, plots will be displayed but not saved.
     """
     loss = results["train_loss"]
     test_loss = results["test_loss"]
@@ -161,10 +150,15 @@ def plot_loss_curves(results, model_dir=None):
     plt.legend()
     plt.grid(True)
     if model_dir:
-        plt.savefig(os.path.join(model_dir, "loss.png"))
+        loss_filename = "loss.png"
+        loss_filepath = os.path.join(model_dir, loss_filename)
+        plt.savefig(loss_filepath)
+        plt.close()
+    else:
+        plt.show()
 
     # Plot accuracy
-    plt.subplot(1, 2, 2)
+    plt.figure(figsize=(15, 7))
     plt.plot(epochs, accuracy, label="train_accuracy")
     plt.plot(epochs, test_accuracy, label="test_accuracy")
     plt.title("Accuracy")
@@ -172,17 +166,18 @@ def plot_loss_curves(results, model_dir=None):
     plt.legend()
     plt.grid(True)
     if model_dir:
-        plt.savefig(os.path.join(model_dir, "accuracy.png"))
+        accuracy_filename = "accuracy.png"
+        accuracy_filepath = os.path.join(model_dir, accuracy_filename)
+        plt.savefig(accuracy_filepath)
+        plt.close()
+    else:
+        plt.show()
 
-    plt.show()
 
 
 # Pred and plot image function from notebook 04 See creation:
-# https://www.learnpytorch.io/04_pytorch_custom_datasets/#113-putting-custom-image-prediction-together-building-a-function
 from typing import List
 import torchvision
-
-
 def pred_and_plot_image(
         model: torch.nn.Module,
         image_path: str,
@@ -309,15 +304,14 @@ def download_data(source: str,
     return image_path
 
 
-# Calculate  class accuracy
-
-
 # Training step
 def train_step(model: torch.nn.Module,
                data_loader: torch.utils.data.DataLoader,
                loss_fn: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
-               device):
+               device,
+               ep: int,
+               EPOCHS: int):
     """ Perform a single training step for the model."""
 
     # Set the model to train mode
@@ -333,7 +327,7 @@ def train_step(model: torch.nn.Module,
     }
 
     # Wrap the data loader with tqdm
-    with tqdm(total=len(data_loader), desc='Training') as pbar:
+    with tqdm(total=len(data_loader), desc=f'[Epoch {ep+1}/{EPOCHS}] Training') as pbar:
         # Loop over the training batches
         for batch, (X, y) in enumerate(data_loader):
             # Put data on target device
@@ -364,6 +358,7 @@ def train_step(model: torch.nn.Module,
                 train_class_acc[y[i].item()] += (y_pred_class[i] == y[i]).float().item()
 
             # Update tqdm progress bar
+            pbar.postfix = f"Loss: {train_loss/(batch+1):.4f} | Accuracy: {(train_acc/(batch+1))*100:.4f}%"
             pbar.update(1)
 
     # Calculate average loss and accuracy
@@ -378,7 +373,9 @@ def train_step(model: torch.nn.Module,
 def test_step(model: torch.nn.Module,
               data_loader: torch.utils.data.DataLoader,
               loss_fn: torch.nn.Module,
-              device):
+              device,
+              ep: int,
+              EPOCHS: int):
     """ Perform a single testing step for the model."""
 
     # Set the model to evaluation mode
@@ -392,27 +389,37 @@ def test_step(model: torch.nn.Module,
         2: 0,
         3: 0
     }
+    all_preds = []
+    all_targets = []
+    with tqdm(total=len(data_loader), desc=f'[Epoch {ep+1}/{EPOCHS}] Testing') as pbar:
+        # Loop over the testing batches
+        with torch.inference_mode():
+            for batch, (X, y) in enumerate(data_loader):
+                # Put data on target device
+                X, y = X.to(device), y.to(device)
 
-    # Loop over the testing batches
-    with torch.inference_mode():
-        for batch, (X, y) in enumerate(data_loader):
-            # Put data on target device
-            X, y = X.to(device), y.to(device)
+                # 1. Forward pass
+                test_pred_logits = model(X)
 
-            # 1. Forward pass
-            test_pred_logits = model(X)
+                # 2. Compute loss per batch
+                loss = loss_fn(test_pred_logits, y)
+                test_loss += loss.item()  # Accumulate the loss
 
-            # 2. Compute loss per batch
-            loss = loss_fn(test_pred_logits, y)
-            test_loss += loss.item()  # Accumulate the loss
+                # Accumulate accuracy
+                test_pred_labels = torch.argmax(torch.softmax(test_pred_logits, dim=1), dim=1)
+                test_acc += (test_pred_labels == y).sum().item() / len(test_pred_labels)
 
-            # Accumulate accuracy
-            test_pred_labels = torch.argmax(torch.softmax(test_pred_logits, dim=1), dim=1)
-            test_acc += (test_pred_labels == y).sum().item() / len(test_pred_labels)
+                # Accumulate class accuracy
+                for i in range(len(y)):
+                    test_class_acc[y[i].item()] += (test_pred_labels[i] == y[i]).float().item()
 
-            # Accumulate class accuracy
-            for i in range(len(y)):
-                test_class_acc[y[i].item()] += (test_pred_labels[i] == y[i]).float().item()
+                # Append predictions and targets
+                all_preds.extend(test_pred_labels.cpu().numpy())
+                all_targets.extend(y.cpu().numpy())
+
+                # Update tqdm progress bar
+                pbar.postfix = f"Loss: {test_loss/(batch+1):.4f} | Accuracy: {(test_acc/(batch+1))*100:.4f}%"
+                pbar.update(1)
 
         # Adjust metrics to get the average loss and accuracy
         test_loss /= len(data_loader)
@@ -420,7 +427,7 @@ def test_step(model: torch.nn.Module,
 
         test_class_acc = {k: v / len(data_loader) for k, v in test_class_acc.items()}
 
-    return test_loss, test_acc, test_class_acc
+    return test_loss, test_acc, test_class_acc , all_preds, all_targets
 
 
 # Training and testing the model
@@ -447,8 +454,9 @@ def train(model: torch.nn.Module,
         'test_acc_per_class': {0: [],
                                1: [],
                                2: [],
-                               3: []}
-
+                               3: []},
+        'all_preds': [],
+        'all_targets': []
     }
 
     # Train the model
@@ -457,23 +465,26 @@ def train(model: torch.nn.Module,
                                                             data_loader=train_loader,
                                                             loss_fn=loss_fn,
                                                             optimizer=optimizer,
-                                                            device=device)
+                                                            device=device,
+                                                            ep=epoch,
+                                                            EPOCHS=epochs)
 
         # Evaluate the model on the test set
-        test_loss, test_acc, test_class_acc = test_step(model=model,
+        test_loss, test_acc, test_class_acc, all_preds, all_targets = test_step(model=model,
                                                         data_loader=test_loader,
                                                         loss_fn=loss_fn,
-                                                        device=device)
+                                                        device=device,
+                                                        ep=epoch,
+                                                        EPOCHS=epochs)
 
-        # Print the metrics
-        print(
-            f"Epoch: {epoch + 1}/{epochs} | Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.4f} | Test Loss: {test_loss:.4f} | Test Acc: {test_acc:.4f}")
-
+        
         # Save the results
         results['train_loss'].append(train_loss)
         results['train_acc'].append(train_acc)
         results['test_loss'].append(test_loss)
         results['test_acc'].append(test_acc)
+        results['all_preds'] = all_preds
+        results['all_targets'] = all_targets
 
         for i in range(4):
             results['train_acc_per_class'][i].append(train_class_acc[i])
@@ -485,8 +496,57 @@ def train(model: torch.nn.Module,
 
     return results
 
+# Evaluate the model
+def evaluate(model: torch.nn.Module,
+             data_loader: torch.utils.data.DataLoader,
+             loss_fn: torch.nn.Module,
+             device,
+             eval_epochs: int = 1):
+    """ Evaluate the model on the test set."""
 
-def save_model(module, model_name, acc=None, hyperparameters=None):
+    # Evaluation dict
+    eval_results = {
+        'test_loss': 0,
+        'test_acc': 0,
+        'test_acc_per_class': {0: 0,
+                           1: 0,
+                           2: 0,
+                           3: 0},
+        'all_preds': [],
+        'all_targets': []
+    }
+    
+    for i in range(eval_epochs):
+        test_loss, test_acc, test_class_acc, all_preds, all_targets = test_step(model=model,
+                                                                                    data_loader=data_loader,
+                                                                                    loss_fn=loss_fn,
+                                                                                    device=device,
+                                                                                    ep=i,
+                                                                                    EPOCHS=eval_epochs)
+
+        eval_results['test_loss'] += test_loss
+        eval_results['test_acc'] += test_acc
+        eval_results['all_preds'].extend(all_preds)
+        eval_results['all_targets'].extend(all_targets)
+
+        for i in range(4):
+            eval_results['test_acc_per_class'][i] += test_class_acc[i]
+
+
+    # Average the results
+    eval_results['test_loss'] /= eval_epochs
+    eval_results['test_acc'] /= eval_epochs
+    eval_results['test_acc_per_class'] = {k: v / eval_epochs for k, v in eval_results['test_acc_per_class'].items()}
+
+    # Print the results
+    print("Evaluation results")
+    print(f"Test Loss: {eval_results['test_loss']:.4f} | Test Acc: {eval_results['test_acc']*100:.2f}%")
+
+    return eval_results
+
+
+# Save the model
+def save_model(module, model_name, acc=None, hyperparameters=None, total_time=None):
     # Create the base directory if it doesn't exist
     base_dir = "models"
     if not os.path.exists(base_dir):
@@ -503,6 +563,7 @@ def save_model(module, model_name, acc=None, hyperparameters=None):
             f.write(f"Model: {model_name}\n")
             f.write(f"Accuracy: {acc*100:.2f}%\n")
             f.write("Hyperparameters:\n")
+            f.write(f"Total time: {total_time}\n")
             for key, value in hyperparameters.items():
                 f.write(f"{key}: {value}\n")
 
@@ -512,7 +573,7 @@ def save_model(module, model_name, acc=None, hyperparameters=None):
     print(f"Model saved at {model_path}")
     return model_dir
 
-
+# Plot the category distribution
 def plot_category_distribution(train_dataset, test_dataset, model_dir=None):
     # Get the class names/categories from the dataset
     classes = train_dataset.classes
@@ -552,7 +613,7 @@ def plot_category_distribution(train_dataset, test_dataset, model_dir=None):
 
 from typing import Tuple, Dict, List
 
-
+# Find classes in a directory
 def find_classes(directory: str) -> Tuple[List[str], Dict[str, int]]:
     classes = sorted(entry.name for entry in os.scandir(directory) if entry.is_dir())
 
@@ -562,11 +623,16 @@ def find_classes(directory: str) -> Tuple[List[str], Dict[str, int]]:
     class_to_idx = {class_name: i for i, class_name in enumerate(classes)}
     return classes, class_to_idx
 
-
-import matplotlib.pyplot as plt
-
-
+# Plot the accuracy per class
 def plot_accuracy_per_class(results, classes=None, model_dir=None):
+    """Plots the accuracy per class over epochs.
+
+        Args:
+            results (dict): Dictionary containing accuracy per class.
+            classes (List[str], optional): List of class names.
+            model_dir (str, optional): Directory to save the plots.
+    """
+
     train_acc_per_class = results.get('train_acc_per_class', {})
     test_acc_per_class = results.get('test_acc_per_class', {})
 
@@ -577,26 +643,90 @@ def plot_accuracy_per_class(results, classes=None, model_dir=None):
     num_classes = len(train_acc_per_class)
     epochs = range(1, len(train_acc_per_class[0]) + 1)
 
-    fig, ax = plt.subplots(num_classes, 1, figsize=(10, 5 * num_classes), sharex=True)
-    if num_classes == 1:
-        ax = [ax]  # Ensure ax is iterable
-
     for i in range(num_classes):
-        ax[i].plot(epochs, train_acc_per_class[i], label=f'Train Class {classes[i]} Accuracy')
-        ax[i].plot(epochs, test_acc_per_class[i], label=f'Test Class {classes[i]} Accuracy')
-        ax[i].set_ylabel('Accuracy')
-        ax[i].set_title(f'Class {i} Accuracy')
-        ax[i].legend()
-        ax[i].grid(True)
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.plot(epochs, train_acc_per_class[i], label=f'Train Class {classes[i]} Accuracy')
+        ax.plot(epochs, test_acc_per_class[i], label=f'Test Class {classes[i]} Accuracy')
+        ax.set_ylabel('Accuracy')
+        ax.set_title(f'Class {i} Accuracy')
+        ax.legend()
+        ax.grid(True)
+        plt.xlabel('Epochs')
+        plt.tight_layout()
+        if model_dir:
+            plt.savefig(os.path.join(model_dir, f"class_{classes[i]}_accuracy.png"))
+        plt.close()
 
 
-    plt.xlabel('Epochs')
+# Plot overall accuracy per class
+def plot_overall_accuracy_per_class(results, classes, model_dir):
+    """Plot and save overall accuracy per class.
+
+    Args:
+        results (dict): Dictionary containing test_class_acc from train function.
+        class_names (list): List of class names.
+        save_dir (str): Directory to save the plots.
+    """
+    test_class_acc = results.get('test_acc_per_class', {})
+
+    if not test_class_acc:
+        print("Test class accuracy data is not available.")
+        return
+
+    # Plot overall accuracy per class
+    plt.figure(figsize=(10, 6))
+    plt.bar(classes, [test_class_acc[i] for i in range(len(classes))])
+    plt.xlabel('Classes')
+    plt.ylabel('Accuracy')
+    plt.title('Overall Accuracy per Class')
     plt.tight_layout()
+    plt.grid(axis='y')
+
+    # Save the plot
     if model_dir:
-        plt.savefig(os.path.join(model_dir, f"class_accuracy.png"))
+        plt.savefig(os.path.join(model_dir, 'overall_accuracy_per_class.png'))
     plt.show()
 
 
 
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 
+def plot_confusion_matrix(results, classes=None, model_dir=None):
+    """Plots and saves the confusion matrix.
+
+    Args:
+        results (dict): Dictionary containing training and testing metrics.
+        classes (List[str], optional): List of class names.
+        model_dir (str, optional): Directory to save the plot.
+    """
+
+    all_preds = results.get('all_preds', [])
+    all_targets = results.get('all_targets', [])
+
+    if not all_preds or not all_targets:
+        print("Prediction and target data are not available.")
+        return
+
+    # Calculate confusion matrix
+    cm = confusion_matrix(all_targets, all_preds)
+
+    # Plot confusion matrix
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False)
+
+    if classes:
+        plt.xticks(ticks=np.arange(len(classes)) + 0.5, labels=classes)
+        plt.yticks(ticks=np.arange(len(classes)) + 0.5, labels=classes)
+        plt.xlabel('Predicted Labels')
+        plt.ylabel('True Labels')
+
+    plt.title('Confusion Matrix')
+    plt.tight_layout()
+
+    # Save the plot if model directory is provided
+    if model_dir:
+        plt.savefig(os.path.join(model_dir, "confusion_matrix.png"))
+
+    plt.show()
 

@@ -1,0 +1,670 @@
+[
+    {
+        "label": "Dataset",
+        "importPath": "torch.utils.data",
+        "description": "torch.utils.data",
+        "isExtraImport": true,
+        "detail": "torch.utils.data",
+        "documentation": {}
+    },
+    {
+        "label": "DataLoader",
+        "importPath": "torch.utils.data",
+        "description": "torch.utils.data",
+        "isExtraImport": true,
+        "detail": "torch.utils.data",
+        "documentation": {}
+    },
+    {
+        "label": "Image",
+        "importPath": "PIL",
+        "description": "PIL",
+        "isExtraImport": true,
+        "detail": "PIL",
+        "documentation": {}
+    },
+    {
+        "label": "*",
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "isExtraImport": true,
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "*",
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "isExtraImport": true,
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "ceil",
+        "importPath": "math",
+        "description": "math",
+        "isExtraImport": true,
+        "detail": "math",
+        "documentation": {}
+    },
+    {
+        "label": "pathlib",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "pathlib",
+        "description": "pathlib",
+        "detail": "pathlib",
+        "documentation": {}
+    },
+    {
+        "label": "Path",
+        "importPath": "pathlib",
+        "description": "pathlib",
+        "isExtraImport": true,
+        "detail": "pathlib",
+        "documentation": {}
+    },
+    {
+        "label": "*",
+        "importPath": "classes",
+        "description": "classes",
+        "isExtraImport": true,
+        "detail": "classes",
+        "documentation": {}
+    },
+    {
+        "label": "torchvision",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "torchvision",
+        "description": "torchvision",
+        "detail": "torchvision",
+        "documentation": {}
+    },
+    {
+        "label": "transforms",
+        "importPath": "torchvision",
+        "description": "torchvision",
+        "isExtraImport": true,
+        "detail": "torchvision",
+        "documentation": {}
+    },
+    {
+        "label": "default_timer",
+        "importPath": "timeit",
+        "description": "timeit",
+        "isExtraImport": true,
+        "detail": "timeit",
+        "documentation": {}
+    },
+    {
+        "label": "torch",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "torch",
+        "description": "torch",
+        "detail": "torch",
+        "documentation": {}
+    },
+    {
+        "label": "nn",
+        "importPath": "torch",
+        "description": "torch",
+        "isExtraImport": true,
+        "detail": "torch",
+        "documentation": {}
+    },
+    {
+        "label": "matplotlib.pyplot",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "matplotlib.pyplot",
+        "description": "matplotlib.pyplot",
+        "detail": "matplotlib.pyplot",
+        "documentation": {}
+    },
+    {
+        "label": "numpy",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "numpy",
+        "description": "numpy",
+        "detail": "numpy",
+        "documentation": {}
+    },
+    {
+        "label": "os",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "os",
+        "description": "os",
+        "detail": "os",
+        "documentation": {}
+    },
+    {
+        "label": "zipfile",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "zipfile",
+        "description": "zipfile",
+        "detail": "zipfile",
+        "documentation": {}
+    },
+    {
+        "label": "tqdm",
+        "importPath": "tqdm.auto",
+        "description": "tqdm.auto",
+        "isExtraImport": true,
+        "detail": "tqdm.auto",
+        "documentation": {}
+    },
+    {
+        "label": "requests",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "requests",
+        "description": "requests",
+        "detail": "requests",
+        "documentation": {}
+    },
+    {
+        "label": "List",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Tuple",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Dict",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "List",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "CustomDataset",
+        "kind": 6,
+        "importPath": "classes",
+        "description": "classes",
+        "peekOfCode": "class CustomDataset(Dataset):\n    def __init__(self,\n                 targ_dir: str,\n                 transform=None):\n        self.paths = list(pathlib.Path(targ_dir).glob('*/*.jpg'))\n        # Setup transform\n        self.transform = transform\n        # Create class to index mapping\n        self.classes, self.class_to_idx = find_classes(targ_dir)\n    def load_image(self, index: str) -> Image.Image:",
+        "detail": "classes",
+        "documentation": {}
+    },
+    {
+        "label": "MRI_classification_CNN",
+        "kind": 6,
+        "importPath": "classes",
+        "description": "classes",
+        "peekOfCode": "class MRI_classification_CNN(nn.Module):\n    def __init__(self, input_shape: int, hidden_units: int, output_shape: int, size: int):\n        super().__init__()\n        self.conv1 = nn.Sequential(\n            nn.Conv2d(input_shape, hidden_units * 3, kernel_size=3, stride=1, padding=1),\n            nn.BatchNorm2d(hidden_units * 3),\n            nn.ReLU(),\n            nn.MaxPool2d(kernel_size=2, stride=2)\n        )\n        self.conv2 = nn.Sequential(",
+        "detail": "classes",
+        "documentation": {}
+    },
+    {
+        "label": "ConvBlock",
+        "kind": 6,
+        "importPath": "classes",
+        "description": "classes",
+        "peekOfCode": "class ConvBlock(nn.Module):\n    def __init__(self, in_channels, out_channels, kernel_size,\n                 stride, padding, groups=1):\n        super(ConvBlock, self).__init__()\n        self.cnnblock = nn.Sequential(\n            nn.Conv2d(in_channels, out_channels, kernel_size,\n                      stride, padding, groups=groups),\n            nn.BatchNorm2d(out_channels),\n            nn.SiLU())\n    def forward(self, x):",
+        "detail": "classes",
+        "documentation": {}
+    },
+    {
+        "label": "MBBlock",
+        "kind": 6,
+        "importPath": "classes",
+        "description": "classes",
+        "peekOfCode": "class MBBlock(nn.Module):\n    def __init__(self, in_channels, out_channels, kernel_size,\n                 stride, padding, expand_ratio, reduction=2):\n        super(MBBlock, self).__init__()\n        hidden_dim = in_channels * expand_ratio\n        self.expand = in_channels != hidden_dim\n        reduced_dim = max(1, int(in_channels / reduction))\n        if self.expand:\n            self.expand_conv = ConvBlock(in_channels, hidden_dim,\n                                         kernel_size=1, stride=1, padding=0)",
+        "detail": "classes",
+        "documentation": {}
+    },
+    {
+        "label": "SqueezeExcitation",
+        "kind": 6,
+        "importPath": "classes",
+        "description": "classes",
+        "peekOfCode": "class SqueezeExcitation(nn.Module):\n    def __init__(self, in_channels, reduced_dim):\n        super(SqueezeExcitation, self).__init__()\n        self.se = nn.Sequential(\n            nn.AdaptiveAvgPool2d(1),  # C x H x W -> C x 1 x 1\n            nn.Conv2d(in_channels, reduced_dim, 1),\n            nn.SiLU(),\n            nn.Conv2d(reduced_dim, in_channels, 1),\n            nn.Sigmoid(),\n        )",
+        "detail": "classes",
+        "documentation": {}
+    },
+    {
+        "label": "EfficientNet",
+        "kind": 6,
+        "importPath": "classes",
+        "description": "classes",
+        "peekOfCode": "class EfficientNet(nn.Module):\n    def __init__(self, model_name, output):\n        super(EfficientNet, self).__init__()\n        phi, resolution, dropout = scale_values[model_name]\n        self.depth_factor, self.width_factor = alpha ** phi, beta ** phi\n        self.last_channels = ceil(1280 * self.width_factor)\n        self.avgpool = nn.AdaptiveAvgPool2d(1)\n        self.feature_extractor()\n        self.flatten = nn.Flatten()\n        self.classifier = nn.Sequential(",
+        "detail": "classes",
+        "documentation": {}
+    },
+    {
+        "label": "basic_mb_params",
+        "kind": 5,
+        "importPath": "classes",
+        "description": "classes",
+        "peekOfCode": "basic_mb_params = [\n    # k, channels(c), repeats(t), stride(s), kernel_size(k)\n    [1, 16, 1, 1, 3],\n    [6, 24, 2, 2, 3],\n    [6, 40, 2, 2, 5],\n    [6, 80, 3, 2, 3],\n    [6, 112, 3, 1, 5],\n    [6, 192, 4, 2, 5],\n    [6, 320, 1, 1, 3],\n]",
+        "detail": "classes",
+        "documentation": {}
+    },
+    {
+        "label": "scale_values",
+        "kind": 5,
+        "importPath": "classes",
+        "description": "classes",
+        "peekOfCode": "scale_values = {\n    # (phi, resolution, dropout)\n    \"b0\": (0, 224, 0.2),\n    \"b1\": (0.5, 240, 0.2),\n    \"b2\": (1, 260, 0.3),\n    \"b3\": (2, 300, 0.3),\n    \"b4\": (3, 380, 0.4),\n    \"b5\": (4, 456, 0.4),\n    \"b6\": (5, 528, 0.5),\n    \"b7\": (6, 600, 0.5),",
+        "detail": "classes",
+        "documentation": {}
+    },
+    {
+        "label": "TRAIN_DIR",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "TRAIN_DIR = 'data/Training'\nTEST_DIR = 'data/Testing'\nBATCH_SIZE = 32\nIN_CHANNELS = 3\nHIDDEN_UNITS = 16  # Number of hidden units in the fully connected layer\nNUM_CLASSES = 4\nSIZE = 224\nLEARNING_RATE = 0.0001\nEPOCHS = 50\nGAMMA = 0.1",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "TEST_DIR",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "TEST_DIR = 'data/Testing'\nBATCH_SIZE = 32\nIN_CHANNELS = 3\nHIDDEN_UNITS = 16  # Number of hidden units in the fully connected layer\nNUM_CLASSES = 4\nSIZE = 224\nLEARNING_RATE = 0.0001\nEPOCHS = 50\nGAMMA = 0.1\nSTEP_SIZE = 5",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "BATCH_SIZE",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "BATCH_SIZE = 32\nIN_CHANNELS = 3\nHIDDEN_UNITS = 16  # Number of hidden units in the fully connected layer\nNUM_CLASSES = 4\nSIZE = 224\nLEARNING_RATE = 0.0001\nEPOCHS = 50\nGAMMA = 0.1\nSTEP_SIZE = 5\nWEIGHT_DECAY = 0.01",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "IN_CHANNELS",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "IN_CHANNELS = 3\nHIDDEN_UNITS = 16  # Number of hidden units in the fully connected layer\nNUM_CLASSES = 4\nSIZE = 224\nLEARNING_RATE = 0.0001\nEPOCHS = 50\nGAMMA = 0.1\nSTEP_SIZE = 5\nWEIGHT_DECAY = 0.01\n# Create the dictionary that hold the hyperparameters",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "HIDDEN_UNITS",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "HIDDEN_UNITS = 16  # Number of hidden units in the fully connected layer\nNUM_CLASSES = 4\nSIZE = 224\nLEARNING_RATE = 0.0001\nEPOCHS = 50\nGAMMA = 0.1\nSTEP_SIZE = 5\nWEIGHT_DECAY = 0.01\n# Create the dictionary that hold the hyperparameters\nhyperparameters = {",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "NUM_CLASSES",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "NUM_CLASSES = 4\nSIZE = 224\nLEARNING_RATE = 0.0001\nEPOCHS = 50\nGAMMA = 0.1\nSTEP_SIZE = 5\nWEIGHT_DECAY = 0.01\n# Create the dictionary that hold the hyperparameters\nhyperparameters = {\n    \"BATCH_SIZE\": BATCH_SIZE,",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "SIZE",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "SIZE = 224\nLEARNING_RATE = 0.0001\nEPOCHS = 50\nGAMMA = 0.1\nSTEP_SIZE = 5\nWEIGHT_DECAY = 0.01\n# Create the dictionary that hold the hyperparameters\nhyperparameters = {\n    \"BATCH_SIZE\": BATCH_SIZE,\n    \"IN_CHANNELS\": IN_CHANNELS,",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "LEARNING_RATE",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "LEARNING_RATE = 0.0001\nEPOCHS = 50\nGAMMA = 0.1\nSTEP_SIZE = 5\nWEIGHT_DECAY = 0.01\n# Create the dictionary that hold the hyperparameters\nhyperparameters = {\n    \"BATCH_SIZE\": BATCH_SIZE,\n    \"IN_CHANNELS\": IN_CHANNELS,\n    \"HIDDEN_UNITS\": HIDDEN_UNITS,",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "EPOCHS",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "EPOCHS = 50\nGAMMA = 0.1\nSTEP_SIZE = 5\nWEIGHT_DECAY = 0.01\n# Create the dictionary that hold the hyperparameters\nhyperparameters = {\n    \"BATCH_SIZE\": BATCH_SIZE,\n    \"IN_CHANNELS\": IN_CHANNELS,\n    \"HIDDEN_UNITS\": HIDDEN_UNITS,\n    \"NUM_CLASSES\": NUM_CLASSES,",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "GAMMA",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "GAMMA = 0.1\nSTEP_SIZE = 5\nWEIGHT_DECAY = 0.01\n# Create the dictionary that hold the hyperparameters\nhyperparameters = {\n    \"BATCH_SIZE\": BATCH_SIZE,\n    \"IN_CHANNELS\": IN_CHANNELS,\n    \"HIDDEN_UNITS\": HIDDEN_UNITS,\n    \"NUM_CLASSES\": NUM_CLASSES,\n    \"SIZE\": SIZE,",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "STEP_SIZE",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "STEP_SIZE = 5\nWEIGHT_DECAY = 0.01\n# Create the dictionary that hold the hyperparameters\nhyperparameters = {\n    \"BATCH_SIZE\": BATCH_SIZE,\n    \"IN_CHANNELS\": IN_CHANNELS,\n    \"HIDDEN_UNITS\": HIDDEN_UNITS,\n    \"NUM_CLASSES\": NUM_CLASSES,\n    \"SIZE\": SIZE,\n    \"LEARNING_RATE\": LEARNING_RATE,",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "WEIGHT_DECAY",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "WEIGHT_DECAY = 0.01\n# Create the dictionary that hold the hyperparameters\nhyperparameters = {\n    \"BATCH_SIZE\": BATCH_SIZE,\n    \"IN_CHANNELS\": IN_CHANNELS,\n    \"HIDDEN_UNITS\": HIDDEN_UNITS,\n    \"NUM_CLASSES\": NUM_CLASSES,\n    \"SIZE\": SIZE,\n    \"LEARNING_RATE\": LEARNING_RATE,\n    \"EPOCHS\": EPOCHS,",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "hyperparameters",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "hyperparameters = {\n    \"BATCH_SIZE\": BATCH_SIZE,\n    \"IN_CHANNELS\": IN_CHANNELS,\n    \"HIDDEN_UNITS\": HIDDEN_UNITS,\n    \"NUM_CLASSES\": NUM_CLASSES,\n    \"SIZE\": SIZE,\n    \"LEARNING_RATE\": LEARNING_RATE,\n    \"EPOCHS\": EPOCHS,\n    \"GAMMA\": GAMMA,\n    \"STEP_SIZE\": STEP_SIZE,",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "DEVICE",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'\n# Define the transforms\ntransform = transforms.Compose([\n    transforms.Resize((SIZE, SIZE)),\n    transforms.RandomRotation(15),\n    transforms.ToTensor()\n])\n# Create the datasets\ntrain_dataset = CustomDataset(TRAIN_DIR, transform=transform)\ntest_dataset = CustomDataset(TEST_DIR, transform=transform)",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "transform",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "transform = transforms.Compose([\n    transforms.Resize((SIZE, SIZE)),\n    transforms.RandomRotation(15),\n    transforms.ToTensor()\n])\n# Create the datasets\ntrain_dataset = CustomDataset(TRAIN_DIR, transform=transform)\ntest_dataset = CustomDataset(TEST_DIR, transform=transform)\n# Create the dataloaders\ntrain_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "train_dataset",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "train_dataset = CustomDataset(TRAIN_DIR, transform=transform)\ntest_dataset = CustomDataset(TEST_DIR, transform=transform)\n# Create the dataloaders\ntrain_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)\ntest_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)\nfrom timeit import default_timer as timer\n# Create the model\nmodel = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(DEVICE)\n# Define the loss function and optimizer\ncriterion = nn.CrossEntropyLoss()",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "test_dataset",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "test_dataset = CustomDataset(TEST_DIR, transform=transform)\n# Create the dataloaders\ntrain_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)\ntest_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)\nfrom timeit import default_timer as timer\n# Create the model\nmodel = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(DEVICE)\n# Define the loss function and optimizer\ncriterion = nn.CrossEntropyLoss()\noptimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "train_loader",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)\ntest_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)\nfrom timeit import default_timer as timer\n# Create the model\nmodel = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(DEVICE)\n# Define the loss function and optimizer\ncriterion = nn.CrossEntropyLoss()\noptimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)\nscheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=STEP_SIZE, gamma=GAMMA)\n# Start the timer",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "test_loader",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)\nfrom timeit import default_timer as timer\n# Create the model\nmodel = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(DEVICE)\n# Define the loss function and optimizer\ncriterion = nn.CrossEntropyLoss()\noptimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)\nscheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=STEP_SIZE, gamma=GAMMA)\n# Start the timer\nstart = timer()",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "model",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "model = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(DEVICE)\n# Define the loss function and optimizer\ncriterion = nn.CrossEntropyLoss()\noptimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)\nscheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=STEP_SIZE, gamma=GAMMA)\n# Start the timer\nstart = timer()\n# Train the model\nresults = train(model, train_loader, test_loader, criterion, optimizer, epochs=EPOCHS, device=DEVICE)\n# End the timer",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "criterion",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "criterion = nn.CrossEntropyLoss()\noptimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)\nscheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=STEP_SIZE, gamma=GAMMA)\n# Start the timer\nstart = timer()\n# Train the model\nresults = train(model, train_loader, test_loader, criterion, optimizer, epochs=EPOCHS, device=DEVICE)\n# End the timer\nend = timer()\nprint_train_time(start, end, device=DEVICE)",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "optimizer",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)\nscheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=STEP_SIZE, gamma=GAMMA)\n# Start the timer\nstart = timer()\n# Train the model\nresults = train(model, train_loader, test_loader, criterion, optimizer, epochs=EPOCHS, device=DEVICE)\n# End the timer\nend = timer()\nprint_train_time(start, end, device=DEVICE)\nmodel_dir = save_model(model, \"MRI_classification_CNN\", acc=results['test_acc'].__getitem__(-1),",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "scheduler",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=STEP_SIZE, gamma=GAMMA)\n# Start the timer\nstart = timer()\n# Train the model\nresults = train(model, train_loader, test_loader, criterion, optimizer, epochs=EPOCHS, device=DEVICE)\n# End the timer\nend = timer()\nprint_train_time(start, end, device=DEVICE)\nmodel_dir = save_model(model, \"MRI_classification_CNN\", acc=results['test_acc'].__getitem__(-1),\n                       hyperparameters=hyperparameters)",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "start",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "start = timer()\n# Train the model\nresults = train(model, train_loader, test_loader, criterion, optimizer, epochs=EPOCHS, device=DEVICE)\n# End the timer\nend = timer()\nprint_train_time(start, end, device=DEVICE)\nmodel_dir = save_model(model, \"MRI_classification_CNN\", acc=results['test_acc'].__getitem__(-1),\n                       hyperparameters=hyperparameters)\n# Plot the results\nplot_loss_curves(results, model_dir=model_dir)",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "results",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "results = train(model, train_loader, test_loader, criterion, optimizer, epochs=EPOCHS, device=DEVICE)\n# End the timer\nend = timer()\nprint_train_time(start, end, device=DEVICE)\nmodel_dir = save_model(model, \"MRI_classification_CNN\", acc=results['test_acc'].__getitem__(-1),\n                       hyperparameters=hyperparameters)\n# Plot the results\nplot_loss_curves(results, model_dir=model_dir)\nclasses = train_dataset.classes\n# Plot accuracy per class",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "end",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "end = timer()\nprint_train_time(start, end, device=DEVICE)\nmodel_dir = save_model(model, \"MRI_classification_CNN\", acc=results['test_acc'].__getitem__(-1),\n                       hyperparameters=hyperparameters)\n# Plot the results\nplot_loss_curves(results, model_dir=model_dir)\nclasses = train_dataset.classes\n# Plot accuracy per class\nplot_accuracy_per_class(results, classes=classes, model_dir=model_dir)",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "model_dir",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "model_dir = save_model(model, \"MRI_classification_CNN\", acc=results['test_acc'].__getitem__(-1),\n                       hyperparameters=hyperparameters)\n# Plot the results\nplot_loss_curves(results, model_dir=model_dir)\nclasses = train_dataset.classes\n# Plot accuracy per class\nplot_accuracy_per_class(results, classes=classes, model_dir=model_dir)",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "classes",
+        "kind": 5,
+        "importPath": "cnn",
+        "description": "cnn",
+        "peekOfCode": "classes = train_dataset.classes\n# Plot accuracy per class\nplot_accuracy_per_class(results, classes=classes, model_dir=model_dir)",
+        "detail": "cnn",
+        "documentation": {}
+    },
+    {
+        "label": "walk_through_dir",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def walk_through_dir(dir_path):\n    \"\"\"\n    Walks through dir_path returning its contents.\n    Args:\n    dir_path (str): target directory\n    Returns:\n    A print out of:\n      number of subdiretories in dir_path\n      number of images (files) in each subdirectory\n      name of each subdirectory",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "plot_decision_boundary",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def plot_decision_boundary(model: torch.nn.Module, X: torch.Tensor, y: torch.Tensor):\n    \"\"\"Plots decision boundaries of model predicting on X in comparison to y.\n    Source - https://madewithml.com/courses/foundations/neural-networks/ (with modifications)\n    \"\"\"\n    # Put everything to CPU (works better with NumPy + Matplotlib)\n    model.to(\"cpu\")\n    X, y = X.to(\"cpu\"), y.to(\"cpu\")\n    # Setup prediction boundaries and grid\n    x_min, x_max = X[:, 0].min() - 0.1, X[:, 0].max() + 0.1\n    y_min, y_max = X[:, 1].min() - 0.1, X[:, 1].max() + 0.1",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "plot_predictions",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def plot_predictions(\n        train_data, train_labels, test_data, test_labels, predictions=None\n):\n    \"\"\"\n  Plots linear training data and test data and compares predictions.\n  \"\"\"\n    plt.figure(figsize=(10, 7))\n    # Plot training data in blue\n    plt.scatter(train_data, train_labels, c=\"b\", s=4, label=\"Training data\")\n    # Plot test data in green",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "accuracy_fn",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def accuracy_fn(y_true, y_pred):\n    \"\"\"Calculates accuracy between truth labels and predictions.\n    Args:\n        y_true (torch.Tensor): Truth labels for predictions.\n        y_pred (torch.Tensor): Predictions to be compared to predictions.\n    Returns:\n        [torch.float]: Accuracy value between y_true and y_pred, e.g. 78.45\n    \"\"\"\n    correct = torch.eq(y_true, y_pred).sum().item()\n    acc = (correct / len(y_pred)) * 100",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "print_train_time",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def print_train_time(start, end, device=None):\n    \"\"\"Prints difference between start and end time.\n    Args:\n        start (float): Start time of computation (preferred in timeit format). \n        end (float): End time of computation.\n        device ([type], optional): Device that compute is running on. Defaults to None.\n    Returns:\n        float: time between start and end in seconds (higher is longer).\n    \"\"\"\n    total_time = end - start",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "plot_loss_curves",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def plot_loss_curves(results, model_dir=None):\n    \"\"\"Plots training curves of a results dictionary.\n    Args:\n        results (dict): dictionary containing list of values, e.g.\n            {\"train_loss\": [...],\n             \"train_acc\": [...],\n             \"test_loss\": [...],\n             \"test_acc\": [...]}\n    \"\"\"\n    loss = results[\"train_loss\"]",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "pred_and_plot_image",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def pred_and_plot_image(\n        model: torch.nn.Module,\n        image_path: str,\n        class_names: List[str] = None,\n        transform=None,\n        device: torch.device = \"cuda\" if torch.cuda.is_available() else \"cpu\",\n):\n    \"\"\"Makes a prediction on a target image with a trained model and plots the image.\n    Args:\n        model (torch.nn.Module): trained PyTorch image classification model.",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "set_seeds",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def set_seeds(seed: int = 42):\n    \"\"\"Sets random sets for torch operations.\n    Args:\n        seed (int, optional): Random seed to set. Defaults to 42.\n    \"\"\"\n    # Set the seed for general torch operations\n    torch.manual_seed(seed)\n    # Set the seed for CUDA torch operations (ones that happen on the GPU)\n    torch.cuda.manual_seed(seed)\ndef download_data(source: str,",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "download_data",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def download_data(source: str,\n                  destination: str,\n                  remove_source: bool = True) -> Path:\n    \"\"\"Downloads a zipped dataset from source and unzips to destination.\n    Args:\n        source (str): A link to a zipped file containing data.\n        destination (str): A target directory to unzip data to.\n        remove_source (bool): Whether to remove the source after downloading and extracting.\n    Returns:\n        pathlib.Path to downloaded data.",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "train_step",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def train_step(model: torch.nn.Module,\n               data_loader: torch.utils.data.DataLoader,\n               loss_fn: torch.nn.Module,\n               optimizer: torch.optim.Optimizer,\n               device):\n    \"\"\" Perform a single training step for the model.\"\"\"\n    # Set the model to train mode\n    model.train()\n    # Initialize the loss and accuracy\n    train_loss, train_acc = 0, 0",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "test_step",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def test_step(model: torch.nn.Module,\n              data_loader: torch.utils.data.DataLoader,\n              loss_fn: torch.nn.Module,\n              device):\n    \"\"\" Perform a single testing step for the model.\"\"\"\n    # Set the model to evaluation mode\n    model.eval()\n    # Initialize test loss and accuracy\n    test_loss, test_acc = 0, 0\n    test_class_acc = {",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "train",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def train(model: torch.nn.Module,\n          train_loader: torch.utils.data.DataLoader,\n          test_loader: torch.utils.data.DataLoader,\n          loss_fn: torch.nn.Module,\n          optimizer: torch.optim.Optimizer,\n          epochs: int,\n          device,\n          scheduler: torch.optim.lr_scheduler = None):\n    \"\"\" Train the model and evaluate on the test set.\"\"\"\n    # Track the losses and accuracies",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "save_model",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def save_model(module, model_name, acc=None, hyperparameters=None):\n    # Create the base directory if it doesn't exist\n    base_dir = \"models\"\n    if not os.path.exists(base_dir):\n        os.makedirs(base_dir)\n    # Create the sub folder for the model if it doesn't exist\n    model_dir = os.path.join(base_dir, f\"{model_name}_accuracy[{acc*100:.2f}%]\")\n    if not os.path.exists(model_dir):\n        os.makedirs(model_dir)\n    if hyperparameters:",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "plot_category_distribution",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def plot_category_distribution(train_dataset, test_dataset, model_dir=None):\n    # Get the class names/categories from the dataset\n    classes = train_dataset.classes\n    print(\"Classes: \", classes)\n    # Count occurrences of each category in the training dataset\n    train_counts = [0] * len(classes)\n    for _, label in train_dataset:\n        train_counts[label] += 1\n    # Count occurrences of each category in the test dataset\n    test_counts = [0] * len(classes)",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "find_classes",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def find_classes(directory: str) -> Tuple[List[str], Dict[str, int]]:\n    classes = sorted(entry.name for entry in os.scandir(directory) if entry.is_dir())\n    if not classes:\n        raise FileNotFoundError(f\"Couldn't find any class folder in {directory}.\")\n    class_to_idx = {class_name: i for i, class_name in enumerate(classes)}\n    return classes, class_to_idx\nimport matplotlib.pyplot as plt\ndef plot_accuracy_per_class(results, classes=None, model_dir=None):\n    train_acc_per_class = results.get('train_acc_per_class', {})\n    test_acc_per_class = results.get('test_acc_per_class', {})",
+        "detail": "helper_functions",
+        "documentation": {}
+    },
+    {
+        "label": "plot_accuracy_per_class",
+        "kind": 2,
+        "importPath": "helper_functions",
+        "description": "helper_functions",
+        "peekOfCode": "def plot_accuracy_per_class(results, classes=None, model_dir=None):\n    train_acc_per_class = results.get('train_acc_per_class', {})\n    test_acc_per_class = results.get('test_acc_per_class', {})\n    if not train_acc_per_class or not test_acc_per_class:\n        print(\"Accuracy per class data is not available.\")\n        return\n    num_classes = len(train_acc_per_class)\n    epochs = range(1, len(train_acc_per_class[0]) + 1)\n    fig, ax = plt.subplots(num_classes, 1, figsize=(10, 5 * num_classes), sharex=True)\n    if num_classes == 1:",
+        "detail": "helper_functions",
+        "documentation": {}
+    }
+]

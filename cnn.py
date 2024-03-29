@@ -9,12 +9,14 @@ BATCH_SIZE = 32
 IN_CHANNELS = 3
 HIDDEN_UNITS = 16  # Number of hidden units in the fully connected layer
 NUM_CLASSES = 4
-SIZE = 224
-LEARNING_RATE = 0.0001
-EPOCHS = 50
+SIZE = 192
+LEARNING_RATE = 0.001
+EPOCHS = 2
 GAMMA = 0.1
 STEP_SIZE = 5
-WEIGHT_DECAY = 0.01
+WEIGHT_DECAY = None
+SEED = 42
+EVAL_EPOCHS = 2
 
 # Create the dictionary that hold the hyperparameters
 hyperparameters = {
@@ -25,9 +27,11 @@ hyperparameters = {
     "SIZE": SIZE,
     "LEARNING_RATE": LEARNING_RATE,
     "EPOCHS": EPOCHS,
+    "EVAL_EPOCHS": EVAL_EPOCHS,  # "EVAL_EPOCHS": "Number of epochs to evaluate the model on the test set
     "GAMMA": GAMMA,
     "STEP_SIZE": STEP_SIZE,
-    "WEIGHT_DECAY": WEIGHT_DECAY
+    "WEIGHT_DECAY": WEIGHT_DECAY,
+    "SEED": SEED
 }
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -54,8 +58,11 @@ model = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(
 
 # Define the loss function and optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=STEP_SIZE, gamma=GAMMA)
+
+# Set seed for reproducibility
+set_seeds(SEED)
 
 # Start the timer
 start = timer()
@@ -65,10 +72,13 @@ results = train(model, train_loader, test_loader, criterion, optimizer, epochs=E
 
 # End the timer
 end = timer()
-print_train_time(start, end, device=DEVICE)
+total_time = print_train_time(start, end, device=DEVICE)
 
-model_dir = save_model(model, "MRI_classification_CNN", acc=results['test_acc'].__getitem__(-1),
-                       hyperparameters=hyperparameters)
+# Evaluate the model
+eval_results = evaluate(model, test_loader, criterion, device=DEVICE, eval_epochs=EVAL_EPOCHS)
+
+model_dir = save_model(model, "MRI_classification_CNN", acc=eval_results['test_acc'],
+                       hyperparameters=hyperparameters, total_time=total_time)
 
 # Plot the results
 plot_loss_curves(results, model_dir=model_dir)
@@ -77,3 +87,10 @@ classes = train_dataset.classes
 
 # Plot accuracy per class
 plot_accuracy_per_class(results, classes=classes, model_dir=model_dir)
+
+# Plot confusion matrix
+plot_confusion_matrix(eval_results, classes=classes, model_dir=model_dir)
+
+
+# Plot the overall accuracy
+plot_overall_accuracy_per_class(eval_results, classes=classes, model_dir=model_dir)
