@@ -159,6 +159,7 @@ def plot_loss_curves(results, model_dir=None):
     plt.title("Loss")
     plt.xlabel("Epochs")
     plt.legend()
+    plt.grid(True)
     if model_dir:
         plt.savefig(os.path.join(model_dir, "loss.png"))
 
@@ -169,6 +170,7 @@ def plot_loss_curves(results, model_dir=None):
     plt.title("Accuracy")
     plt.xlabel("Epochs")
     plt.legend()
+    plt.grid(True)
     if model_dir:
         plt.savefig(os.path.join(model_dir, "accuracy.png"))
 
@@ -484,16 +486,25 @@ def train(model: torch.nn.Module,
     return results
 
 
-def save_model(module, model_name, acc=None, bs=None, ch=None, lr=None, ep=None, sz=None, hu=None):
+def save_model(module, model_name, acc=None, hyperparameters=None):
     # Create the base directory if it doesn't exist
     base_dir = "models"
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
 
     # Create the sub folder for the model if it doesn't exist
-    model_dir = os.path.join(base_dir, f"{model_name}_ch{ch}_bs{bs}_lr{lr}_ep{ep}_sz{sz}_hu{hu}_acc{acc:.2f}")
+    model_dir = os.path.join(base_dir, f"{model_name}_accuracy[{acc*100:.2f}%]")
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
+
+    if hyperparameters:
+        # Create a file that contains info about the model and the hyperparameters
+        with open(os.path.join(model_dir, "info.txt"), "w") as f:
+            f.write(f"Model: {model_name}\n")
+            f.write(f"Accuracy: {acc*100:.2f}%\n")
+            f.write("Hyperparameters:\n")
+            for key, value in hyperparameters.items():
+                f.write(f"{key}: {value}\n")
 
     # Save the model
     model_path = os.path.join(model_dir, f"{model_name}.pt")
@@ -532,6 +543,7 @@ def plot_category_distribution(train_dataset, test_dataset, model_dir=None):
     ax.set_xticks(x)
     ax.set_xticklabels(classes, rotation=45, ha="right")
     ax.legend()
+
     if model_dir:
         plt.savefig(os.path.join(model_dir, "category_distribution.png"))
 
@@ -575,11 +587,13 @@ def plot_accuracy_per_class(results, classes=None, model_dir=None):
         ax[i].set_ylabel('Accuracy')
         ax[i].set_title(f'Class {i} Accuracy')
         ax[i].legend()
-        if model_dir:
-            plt.savefig(os.path.join(model_dir, f"class_{i}_accuracy.png"))
+        ax[i].grid(True)
+
 
     plt.xlabel('Epochs')
     plt.tight_layout()
+    if model_dir:
+        plt.savefig(os.path.join(model_dir, f"class_accuracy.png"))
     plt.show()
 
 
