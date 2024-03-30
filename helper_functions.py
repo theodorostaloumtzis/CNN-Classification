@@ -130,7 +130,9 @@ def plot_loss_curves(results, model_dir=None):
             {"train_loss": [...],
              "train_acc": [...],
              "test_loss": [...],
-             "test_acc": [...]}
+             "test_acc": [...],
+             "train_all_preds": [...],
+             "train_all_targets": [...],}
         model_dir (str): directory to save the plots, if None, plots will be displayed but not saved.
     """
     loss = results["train_loss"]
@@ -319,13 +321,8 @@ def train_step(model: torch.nn.Module,
 
     # Initialize the loss and accuracy
     train_loss, train_acc = 0, 0
-    train_class_acc = {
-        0: 0,
-        1: 0,
-        2: 0,
-        3: 0
-    }
-
+    all_preds = []
+    all_targets = []
     # Wrap the data loader with tqdm
     with tqdm(total=len(data_loader), desc=f'[Epoch {ep+1}/{EPOCHS}] Training') as pbar:
         # Loop over the training batches
@@ -353,10 +350,10 @@ def train_step(model: torch.nn.Module,
             y_pred_class = torch.argmax(torch.softmax(y_pred, dim=1), dim=1)
             train_acc += (y_pred_class == y).float().mean().item()  # formula for accuracy = correct/total
 
-            # Accumulate class accuracy
-            for i in range(len(y)):
-                train_class_acc[y[i].item()] += (y_pred_class[i] == y[i]).float().item()
-
+            # Accumulate predictions and targets
+            all_preds.extend(y_pred_class.cpu().numpy())
+            all_targets.extend(y.cpu().numpy())
+                
             # Update tqdm progress bar
             pbar.postfix = f"Loss: {train_loss/(batch+1):.4f} | Accuracy: {(train_acc/(batch+1))*100:.4f}%"
             pbar.update(1)
@@ -364,9 +361,8 @@ def train_step(model: torch.nn.Module,
     # Calculate average loss and accuracy
     train_loss /= len(data_loader)
     train_acc /= len(data_loader)
-    train_class_acc = {k: v / len(data_loader) for k, v in train_class_acc.items()}
 
-    return train_loss, train_acc, train_class_acc
+    return train_loss, train_acc, all_preds, all_targets
 
 
 # Testing step
@@ -383,14 +379,9 @@ def test_step(model: torch.nn.Module,
 
     # Initialize test loss and accuracy
     test_loss, test_acc = 0, 0
-    test_class_acc = {
-        0: 0,
-        1: 0,
-        2: 0,
-        3: 0
-    }
     all_preds = []
     all_targets = []
+    
     with tqdm(total=len(data_loader), desc=f'[Epoch {ep+1}/{EPOCHS}] Testing') as pbar:
         # Loop over the testing batches
         with torch.inference_mode():
@@ -409,10 +400,6 @@ def test_step(model: torch.nn.Module,
                 test_pred_labels = torch.argmax(torch.softmax(test_pred_logits, dim=1), dim=1)
                 test_acc += (test_pred_labels == y).sum().item() / len(test_pred_labels)
 
-                # Accumulate class accuracy
-                for i in range(len(y)):
-                    test_class_acc[y[i].item()] += (test_pred_labels[i] == y[i]).float().item()
-
                 # Append predictions and targets
                 all_preds.extend(test_pred_labels.cpu().numpy())
                 all_targets.extend(y.cpu().numpy())
@@ -425,9 +412,8 @@ def test_step(model: torch.nn.Module,
         test_loss /= len(data_loader)
         test_acc /= len(data_loader)
 
-        test_class_acc = {k: v / len(data_loader) for k, v in test_class_acc.items()}
 
-    return test_loss, test_acc, test_class_acc , all_preds, all_targets
+    return test_loss, test_acc, all_preds, all_targets
 
 
 # Training and testing the model
@@ -447,48 +433,41 @@ def train(model: torch.nn.Module,
         'train_acc': [],
         'test_loss': [],
         'test_acc': [],
-        'train_acc_per_class': {0: [],
-                                1: [],
-                                2: [],
-                                3: []},
-        'test_acc_per_class': {0: [],
-                               1: [],
-                               2: [],
-                               3: []},
         'all_preds': [],
-        'all_targets': []
+        'all_targets': [],
+        'train_all_preds': [[]],
+        'train_all_targets': [[]],
+        'test_all_preds': [[] ],
+        'test_all_targets': [[] ]
     }
 
     # Train the model
     for epoch in range(epochs):
-        train_loss, train_acc, train_class_acc = train_step(model=model,
-                                                            data_loader=train_loader,
-                                                            loss_fn=loss_fn,
-                                                            optimizer=optimizer,
-                                                            device=device,
-                                                            ep=epoch,
-                                                            EPOCHS=epochs)
+        train_loss, train_acc, train_all_preds, train_all_targets = train_step(model=model,
+                                                                                data_loader=train_loader,
+                                                                                loss_fn=loss_fn,
+                                                                                optimizer=optimizer,
+                                                                                device=device,
+                                                                                ep=epoch,
+                                                                                EPOCHS=epochs)
 
         # Evaluate the model on the test set
-        test_loss, test_acc, test_class_acc, all_preds, all_targets = test_step(model=model,
-                                                        data_loader=test_loader,
-                                                        loss_fn=loss_fn,
-                                                        device=device,
-                                                        ep=epoch,
-                                                        EPOCHS=epochs)
+        test_loss, test_acc, test_all_preds, test_all_targets = test_step(model=model,
+                                                                            data_loader=test_loader,
+                                                                            loss_fn=loss_fn,
+                                                                            device=device,
+                                                                            ep=epoch,
+                                                                            EPOCHS=epochs)
 
-        
         # Save the results
         results['train_loss'].append(train_loss)
         results['train_acc'].append(train_acc)
         results['test_loss'].append(test_loss)
         results['test_acc'].append(test_acc)
-        results['all_preds'] = all_preds
-        results['all_targets'] = all_targets
-
-        for i in range(4):
-            results['train_acc_per_class'][i].append(train_class_acc[i])
-            results['test_acc_per_class'][i].append(test_class_acc[i])
+        results['train_all_preds'].append(train_all_preds)
+        results['train_all_targets'].append(train_all_targets)
+        results['test_all_preds'].append(test_all_preds)
+        results['test_all_targets'].append(test_all_targets)
 
     # Step the scheduler
     if scheduler:
@@ -508,35 +487,27 @@ def evaluate(model: torch.nn.Module,
     eval_results = {
         'test_loss': 0,
         'test_acc': 0,
-        'test_acc_per_class': {0: 0,
-                           1: 0,
-                           2: 0,
-                           3: 0},
         'all_preds': [],
         'all_targets': []
     }
     
     for i in range(eval_epochs):
-        test_loss, test_acc, test_class_acc, all_preds, all_targets = test_step(model=model,
-                                                                                    data_loader=data_loader,
-                                                                                    loss_fn=loss_fn,
-                                                                                    device=device,
-                                                                                    ep=i,
-                                                                                    EPOCHS=eval_epochs)
+        test_loss, test_acc, all_preds, all_targets = test_step(model=model,
+                                                                data_loader=data_loader,
+                                                                loss_fn=loss_fn,
+                                                                device=device,
+                                                                ep=i,
+                                                                EPOCHS=eval_epochs)
 
         eval_results['test_loss'] += test_loss
         eval_results['test_acc'] += test_acc
         eval_results['all_preds'].extend(all_preds)
         eval_results['all_targets'].extend(all_targets)
 
-        for i in range(4):
-            eval_results['test_acc_per_class'][i] += test_class_acc[i]
-
 
     # Average the results
     eval_results['test_loss'] /= eval_epochs
     eval_results['test_acc'] /= eval_epochs
-    eval_results['test_acc_per_class'] = {k: v / eval_epochs for k, v in eval_results['test_acc_per_class'].items()}
 
     # Print the results
     print("Evaluation results")
@@ -629,35 +600,103 @@ def plot_accuracy_per_class(results, classes=None, model_dir=None):
     """Plots the accuracy per class over epochs.
 
         Args:
-            results (dict): Dictionary containing accuracy per class.
+            results (dict): Dictionary containing training and testing metrics.
+            structure of results dictionary:
+            results = {
+                "train_loss": [list of training losses],
+                "train_acc": [list of training accuracies],
+                "test_loss": [list of testing losses],
+                "test_acc": [list of testing accuracies],
+                "train_all_preds": [list of all training predictions],
+                "train_all_targets": [list of all training targets],
+                "test_all_preds": [list of all testing predictions],
+                "test_all_targets": [list of all testing targets],
+            }
+
             classes (List[str], optional): List of class names.
-            model_dir (str, optional): Directory to save the plots.
+            model_dir (str, optional): Directory to save the plot.
     """
+    import numpy as np
 
-    train_acc_per_class = results.get('train_acc_per_class', {})
-    test_acc_per_class = results.get('test_acc_per_class', {})
-
-    if not train_acc_per_class or not test_acc_per_class:
-        print("Accuracy per class data is not available.")
+    if results is None:
+        print("Results dictionary is not available.")
         return
+    elif classes is None:
+        print("Classes are not available.")
+        return
+    elif model_dir is None:
+        print("Model directory is not available.")
+        return
+    
+    if results['train_all_preds'] is None or results['train_all_targets'] is None or results['test_all_preds'] is None or results['test_all_targets'] is None:
+        print("Prediction and target data are not available.")
+        return
+    
+    train_all_preds = results['train_all_preds']
+    train_all_targets = results['train_all_targets']
+    test_all_preds = results['test_all_preds']
+    test_all_targets = results['test_all_targets']
 
-    num_classes = len(train_acc_per_class)
-    epochs = range(1, len(train_acc_per_class[0]) + 1)
+    # Calculate accuracy per class per epoch for training and testing
+    train_class_accuracy_per_epoch = [[0] * len(classes) for _ in range(len(train_all_preds))]
+    test_class_accuracy_per_epoch = [[0] * len(classes) for _ in range(len(test_all_preds))]
 
-    for i in range(num_classes):
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.plot(epochs, train_acc_per_class[i], label=f'Train Class {classes[i]} Accuracy')
-        ax.plot(epochs, test_acc_per_class[i], label=f'Test Class {classes[i]} Accuracy')
-        ax.set_ylabel('Accuracy')
-        ax.set_title(f'Class {i} Accuracy')
-        ax.legend()
-        ax.grid(True)
-        plt.xlabel('Epochs')
-        plt.tight_layout()
-        if model_dir:
-            plt.savefig(os.path.join(model_dir, f"class_{classes[i]}_accuracy.png"))
-        plt.close()
+    train_correct = [[0] * len(classes) for _ in range(len(train_all_preds))]
+    test_correct = [[0] * len(classes) for _ in range(len(test_all_preds))]
+    train_total =  [[0] * len(classes) for _ in range(len(train_all_preds))]
+    test_total =  [[0] * len(classes) for _ in range(len(test_all_preds))]
 
+    # Calculate accuracy per class per epoch for training 
+    for epoch in range(len(train_all_preds)):
+        for pred, target in zip(train_all_preds[epoch], train_all_targets[epoch]):
+            train_correct[epoch][target] += (pred == target)
+            train_total[epoch][target] += 1
+
+        for i in range(len(classes)):
+            # Check if train_total[epoch][i] is zero before division
+            if train_total[epoch][i] != 0:
+                train_class_accuracy_per_epoch[epoch][i] = train_correct[epoch][i] / train_total[epoch][i]
+            else:
+                train_class_accuracy_per_epoch[epoch][i] = 0  # Assigning 0 if denominator is zero
+
+    # Calculate accuracy per class per epoch for testing
+    for epoch in range(len(test_all_preds)):
+        for pred, target in zip(test_all_preds[epoch], test_all_targets[epoch]):
+            test_correct[epoch][target] += (pred == target)
+            test_total[epoch][target] += 1
+
+        for i in range(len(classes)):
+            # Check if test_total[epoch][i] is zero before division
+            if test_total[epoch][i] != 0:
+                test_class_accuracy_per_epoch[epoch][i] = test_correct[epoch][i] / test_total[epoch][i]
+            else:
+                test_class_accuracy_per_epoch[epoch][i] = 0  # Assigning 0 if denominator is zero
+
+
+    # Plot the accuracy per class for training and testing
+    fig, axs = plt.subplots(2, figsize=(10, 10))
+    fig.suptitle('Accuracy per Class Over Epochs')
+
+    for i in range(len(classes)):
+        axs[0].plot(range(len(train_class_accuracy_per_epoch)), [epoch[i] for epoch in train_class_accuracy_per_epoch], label=classes[i])
+    axs[0].set_title('Training Accuracy per Class')
+    axs[0].set_xlabel('Epochs')
+    axs[0].set_ylabel('Accuracy')
+    axs[0].legend()
+    axs[0].grid(axis='y')
+
+    for i in range(len(classes)):
+        axs[1].plot(range(len(test_class_accuracy_per_epoch)), [epoch[i] for epoch in test_class_accuracy_per_epoch], label=classes[i])
+    axs[1].set_title('Testing Accuracy per Class')
+    axs[1].set_xlabel('Epochs')
+    axs[1].set_ylabel('Accuracy')
+    axs[1].legend()
+    axs[1].grid(axis='y')
+
+    plt.tight_layout()
+    if model_dir:
+        plt.savefig(model_dir + '/accuracy_per_class.png')
+    plt.show()
 
 
 import seaborn as sns

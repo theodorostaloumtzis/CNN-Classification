@@ -5,13 +5,13 @@ from torchvision import transforms
 
 TRAIN_DIR = 'data/Training' # Path to the training directory
 TEST_DIR = 'data/Testing' # Path to the testing directory
-BATCH_SIZE = 16 # Batch size for the dataloaders
+BATCH_SIZE = 32 # Batch size for the dataloaders
 IN_CHANNELS = 3 # Number of input channels
 HIDDEN_UNITS = 16  # Number of hidden units in the fully connected layer
 NUM_CLASSES = 4 # Number of classes in the dataset
-SIZE = 224 # Size of the images
+SIZE = 192 # Size of the images
 LEARNING_RATE = 0.001 # Learning rate for the optimizer
-EPOCHS = 20 # Number of epochs to train the model
+EPOCHS = 15 # Number of epochs to train the model
 GAMMA = 0.1 # Multiplicative factor of learning rate decay
 STEP_SIZE = 5 # Step size for the learning rate scheduler
 WEIGHT_DECAY = None # Weight decay for the optimizer
