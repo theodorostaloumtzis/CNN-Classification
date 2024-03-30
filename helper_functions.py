@@ -8,6 +8,8 @@ import zipfile
 from pathlib import Path
 from tqdm.auto import tqdm
 import requests
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 
 def walk_through_dir(dir_path):
     """
@@ -699,8 +701,7 @@ def plot_accuracy_per_class(results, classes=None, model_dir=None):
     plt.show()
 
 
-import seaborn as sns
-from sklearn.metrics import confusion_matrix
+
 
 def plot_confusion_matrix(results, classes=None, model_dir=None):
     """Plots and saves the confusion matrix.

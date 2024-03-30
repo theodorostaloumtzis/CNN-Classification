@@ -2,6 +2,7 @@ from helper_functions import *
 from classes import *
 from torch.utils.data import DataLoader
 from torchvision import transforms
+from timeit import default_timer as timer
 
 TRAIN_DIR = 'data/Training' # Path to the training directory
 TEST_DIR = 'data/Testing' # Path to the testing directory
@@ -52,9 +53,6 @@ test_dataset = CustomDataset(TEST_DIR, transform=transform)
 # Create the dataloaders
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
-
-from timeit import default_timer as timer
-
 
 # Create the model
 model = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(DEVICE)
