@@ -82,11 +82,11 @@ class MRI_classification_CNN(nn.Module):
         )
 
         self.fc1 = nn.Sequential(
-            nn.Linear(hidden_units * size // 4 * size // 4, hidden_units * 4),
+            nn.Linear(hidden_units * size // 4 * size // 4, 192),
             nn.ReLU(),
-            nn.Linear(hidden_units * 4, hidden_units * 2),
+            nn.Linear(192, 64),
             nn.ReLU(),
-            nn.Linear(hidden_units * 2, output_shape)
+            nn.Linear(64, output_shape)
         )
 
     def forward(self, x):

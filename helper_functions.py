@@ -175,8 +175,6 @@ def plot_loss_curves(results, model_dir=None):
     else:
         plt.show()
 
-
-
 # Pred and plot image function from notebook 04 See creation:
 from typing import List
 import torchvision
@@ -661,36 +659,6 @@ def plot_accuracy_per_class(results, classes=None, model_dir=None):
         plt.close()
 
 
-# Plot overall accuracy per class
-def plot_overall_accuracy_per_class(results, classes, model_dir):
-    """Plot and save overall accuracy per class.
-
-    Args:
-        results (dict): Dictionary containing test_class_acc from train function.
-        class_names (list): List of class names.
-        save_dir (str): Directory to save the plots.
-    """
-    test_class_acc = results.get('test_acc_per_class', {})
-
-    if not test_class_acc:
-        print("Test class accuracy data is not available.")
-        return
-
-    # Plot overall accuracy per class
-    plt.figure(figsize=(10, 6))
-    plt.bar(classes, [test_class_acc[i] for i in range(len(classes))])
-    plt.xlabel('Classes')
-    plt.ylabel('Accuracy')
-    plt.title('Overall Accuracy per Class')
-    plt.tight_layout()
-    plt.grid(axis='y')
-
-    # Save the plot
-    if model_dir:
-        plt.savefig(os.path.join(model_dir, 'overall_accuracy_per_class.png'))
-    plt.show()
-
-
 
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
@@ -714,6 +682,9 @@ def plot_confusion_matrix(results, classes=None, model_dir=None):
     # Calculate confusion matrix
     cm = confusion_matrix(all_targets, all_preds)
 
+    # Clacula accuracy per class
+    class_accuracy = cm.diagonal() / cm.sum(axis=1)
+
     # Plot confusion matrix
     plt.figure(figsize=(10, 8))
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False)
@@ -731,5 +702,20 @@ def plot_confusion_matrix(results, classes=None, model_dir=None):
     if model_dir:
         plt.savefig(os.path.join(model_dir, "confusion_matrix.png"))
 
+    plt.show()
+
+    # Plot the overall accuracy per class
+    plt.figure(figsize=(10, 6))
+    plt.bar(classes, class_accuracy)
+    plt.xlabel('Classes')
+    plt.ylabel('Accuracy')
+    plt.title('Accuracy per Class')
+    plt.tight_layout()
+    plt.ylim(0, 1)
+    plt.grid(axis='y')
+
+    if model_dir:
+        plt.savefig(os.path.join(model_dir, 'accuracy_per_class.png'))
+    
     plt.show()
 

@@ -17,6 +17,7 @@ STEP_SIZE = 5 # Step size for the learning rate scheduler
 WEIGHT_DECAY = None # Weight decay for the optimizer
 SEED = 42 # Seed for reproducibility
 EVAL_EPOCHS = 10  # Number of epochs to evaluate the model on the test set
+RANDOM_ROTATION = 10  # Random rotation for the images
 
 # Create the dictionary that hold the hyperparameters
 hyperparameters = {
@@ -31,7 +32,8 @@ hyperparameters = {
     "GAMMA": GAMMA,
     "STEP_SIZE": STEP_SIZE,
     "WEIGHT_DECAY": WEIGHT_DECAY,
-    "SEED": SEED
+    "SEED": SEED,
+    "RANDOM_ROTATION": RANDOM_ROTATION
 }
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -39,7 +41,7 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 # Define the transforms
 transform = transforms.Compose([
     transforms.Resize((SIZE, SIZE)),
-    transforms.RandomRotation(15),
+    transforms.RandomRotation(RANDOM_ROTATION),
     transforms.ToTensor()
 ])
 
@@ -52,7 +54,7 @@ train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
 from timeit import default_timer as timer
-from cnn import IN_CHANNELS
+
 
 # Create the model
 model = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(DEVICE)
@@ -91,7 +93,3 @@ plot_accuracy_per_class(results, classes=classes, model_dir=model_dir)
 
 # Plot confusion matrix
 plot_confusion_matrix(eval_results, classes=classes, model_dir=model_dir)
-
-
-# Plot the overall accuracy
-plot_overall_accuracy_per_class(eval_results, classes=classes, model_dir=model_dir)
