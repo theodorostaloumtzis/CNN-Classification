@@ -148,7 +148,7 @@ def plot_loss_curves(results, model_dir=None):
     plt.figure(figsize=(15, 7))
 
     # Plot loss
-    plt.subplot(1, 2, 1)
+    plt.figure(figsize=(15, 7))
     plt.plot(epochs, loss, label="train_loss")
     plt.plot(epochs, test_loss, label="test_loss")
     plt.title("Loss")
@@ -156,12 +156,9 @@ def plot_loss_curves(results, model_dir=None):
     plt.legend()
     plt.grid(True)
     if model_dir:
-        loss_filename = "loss.png"
-        loss_filepath = os.path.join(model_dir, loss_filename)
-        plt.savefig(loss_filepath)
-        plt.close()
-    else:
-        plt.show()
+        plt.savefig(os.path.join(model_dir, "loss.png"))
+        
+    
 
     # Plot accuracy
     plt.figure(figsize=(15, 7))
@@ -172,12 +169,8 @@ def plot_loss_curves(results, model_dir=None):
     plt.legend()
     plt.grid(True)
     if model_dir:
-        accuracy_filename = "accuracy.png"
-        accuracy_filepath = os.path.join(model_dir, accuracy_filename)
-        plt.savefig(accuracy_filepath)
-        plt.close()
-    else:
-        plt.show()
+        plt.savefig(os.path.join(model_dir, "accuracy.png"))
+
 
 # Pred and plot image function from notebook 04 See creation:
 from typing import List
@@ -656,10 +649,8 @@ def plot_accuracy_per_class(results, classes=None, model_dir=None):
 
         for i in range(len(classes)):
             # Check if train_total[epoch][i] is zero before division
-            if train_total[epoch][i] != 0:
-                train_class_accuracy_per_epoch[epoch][i] = train_correct[epoch][i] / train_total[epoch][i]
-            else:
-                train_class_accuracy_per_epoch[epoch][i] = 0  # Assigning 0 if denominator is zero
+            train_class_accuracy_per_epoch[epoch + 1][i] = train_correct[epoch + 1][i] / train_total[epoch + 1][i]
+            
 
     # Calculate accuracy per class per epoch for testing
     for epoch in range(len(test_all_preds)):
@@ -669,10 +660,8 @@ def plot_accuracy_per_class(results, classes=None, model_dir=None):
 
         for i in range(len(classes)):
             # Check if test_total[epoch][i] is zero before division
-            if test_total[epoch][i] != 0:
-                test_class_accuracy_per_epoch[epoch][i] = test_correct[epoch][i] / test_total[epoch][i]
-            else:
-                test_class_accuracy_per_epoch[epoch][i] = 0  # Assigning 0 if denominator is zero
+            test_class_accuracy_per_epoch[epoch + 1][i] = test_correct[epoch + 1][i] / test_total[epoch + 1][i]
+            
 
 
     # Plot the accuracy per class for training and testing
@@ -699,8 +688,6 @@ def plot_accuracy_per_class(results, classes=None, model_dir=None):
     if model_dir:
         plt.savefig(model_dir + '/accuracy_per_class.png')
     plt.show()
-
-
 
 
 def plot_confusion_matrix(results, classes=None, model_dir=None):

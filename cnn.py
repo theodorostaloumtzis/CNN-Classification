@@ -4,90 +4,118 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from timeit import default_timer as timer
 
-TRAIN_DIR = 'data/Training' # Path to the training directory
-TEST_DIR = 'data/Testing' # Path to the testing directory
-BATCH_SIZE = 32 # Batch size for the dataloaders
-IN_CHANNELS = 3 # Number of input channels
-HIDDEN_UNITS = 16  # Number of hidden units in the fully connected layer
-NUM_CLASSES = 4 # Number of classes in the dataset
-SIZE = 192 # Size of the images
-LEARNING_RATE = 0.001 # Learning rate for the optimizer
-EPOCHS = 15 # Number of epochs to train the model
-GAMMA = 0.1 # Multiplicative factor of learning rate decay
-STEP_SIZE = 5 # Step size for the learning rate scheduler
-WEIGHT_DECAY = None # Weight decay for the optimizer
-SEED = 42 # Seed for reproducibility
-EVAL_EPOCHS = 10  # Number of epochs to evaluate the model on the test set
-RANDOM_ROTATION = 10  # Random rotation for the images
+def insert_info():
+    """
+    Insert the information about the project and the author.
+    """
 
-# Create the dictionary that hold the hyperparameters
-hyperparameters = {
-    "BATCH_SIZE": BATCH_SIZE,
-    "IN_CHANNELS": IN_CHANNELS,
-    "HIDDEN_UNITS": HIDDEN_UNITS,
-    "NUM_CLASSES": NUM_CLASSES,
-    "SIZE": SIZE,
-    "LEARNING_RATE": LEARNING_RATE,
-    "EPOCHS": EPOCHS,
-    "EVAL_EPOCHS": EVAL_EPOCHS,  # "EVAL_EPOCHS": "Number of epochs to evaluate the model on the test set
-    "GAMMA": GAMMA,
-    "STEP_SIZE": STEP_SIZE,
-    "WEIGHT_DECAY": WEIGHT_DECAY,
-    "SEED": SEED,
-    "RANDOM_ROTATION": RANDOM_ROTATION
-}
+    print("This project is about classifying MRI images using a Convolutional Neural Network (CNN).")
+    print("The author of this project is: ")
+    print("Name: Taloumtzis Theodoros")
+    print("Email: taloumtzistheodoros@gmail.com")
 
-DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+    batch_size = int(input("Enter the batch size normal inputs(8/16/32): "))
+    epochs = int(input("Enter the number of epochs for training: "))
+    learning_rate = float(input("Enter the learning rate for the optimizer: "))
+    hidden_units = int(input("Enter the number of hidden units in the fully connected layer: "))
+    size = int(input("Enter the size of the images: "))
 
-# Define the transforms
-transform = transforms.Compose([
-    transforms.Resize((SIZE, SIZE)),
-    transforms.RandomRotation(RANDOM_ROTATION),
-    transforms.ToTensor()
-])
+    return batch_size, epochs, learning_rate, hidden_units, size
 
-# Create the datasets
-train_dataset = CustomDataset(TRAIN_DIR, transform=transform)
-test_dataset = CustomDataset(TEST_DIR, transform=transform)
 
-# Create the dataloaders
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+# Define the main function
+def main():
+    """
+    Main function to train and evaluate the model.
+    """
+    batch_size, epochs, learning_rate, hidden_units, size = insert_info()
 
-# Create the model
-model = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(DEVICE)
+    # Define the hyperparameters
+    TRAIN_DIR = 'data/Training' # Path to the training directory
+    TEST_DIR = 'data/Testing' # Path to the testing directory
+    BATCH_SIZE = batch_size # Batch size for the dataloaders
+    IN_CHANNELS = 3 # Number of input channels
+    HIDDEN_UNITS = hidden_units  # Number of hidden units in the fully connected layer
+    NUM_CLASSES = 4 # Number of classes in the dataset
+    SIZE = size # Size of the images
+    LEARNING_RATE = learning_rate # Learning rate for the optimizer
+    EPOCHS = epochs # Number of epochs to train the model
+    GAMMA = 0.1 # Multiplicative factor of learning rate decay
+    STEP_SIZE = 5 # Step size for the learning rate scheduler
+    WEIGHT_DECAY = 0.025 # Weight decay for the optimizer
+    SEED = 42 # Seed for reproducibility
+    EVAL_EPOCHS = 10  # Number of epochs to evaluate the model on the test set
+    RANDOM_ROTATION = 10  # Random rotation for the images
+    DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-# Define the loss function and optimizer
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=STEP_SIZE, gamma=GAMMA)
+    # Create the dictionary that hold the hyperparameters
+    hyperparameters = {
+        "BATCH_SIZE": BATCH_SIZE,
+        "IN_CHANNELS": IN_CHANNELS,
+        "HIDDEN_UNITS": HIDDEN_UNITS,
+        "NUM_CLASSES": NUM_CLASSES,
+        "SIZE": SIZE,
+        "LEARNING_RATE": LEARNING_RATE,
+        "EPOCHS": EPOCHS,
+        "EVAL_EPOCHS": EVAL_EPOCHS,  # "EVAL_EPOCHS": "Number of epochs to evaluate the model on the test set
+        "GAMMA": GAMMA,
+        "STEP_SIZE": STEP_SIZE,
+        "WEIGHT_DECAY": WEIGHT_DECAY,
+        "SEED": SEED,
+        "RANDOM_ROTATION": RANDOM_ROTATION,
+        "DEVICE": DEVICE
+    }
 
-# Set seed for reproducibility
-set_seeds(SEED)
+    # Define the transforms
+    transform = transforms.Compose([
+        transforms.Resize((SIZE, SIZE)),
+        transforms.RandomRotation(RANDOM_ROTATION),
+        transforms.ToTensor()
+    ])
 
-# Start the timer
-start = timer()
+    # Create the datasets
+    train_dataset = CustomDataset(TRAIN_DIR, transform=transform)
+    test_dataset = CustomDataset(TEST_DIR, transform=transform)
 
-# Train the model
-results = train(model, train_loader, test_loader, criterion, optimizer, epochs=EPOCHS, device=DEVICE)
+    # Create the dataloaders
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-# End the timer
-end = timer()
-total_time = print_train_time(start, end, device=DEVICE)
+    # Create the model
+    model = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(DEVICE)
 
-# Evaluate the model
-eval_results = evaluate(model, test_loader, criterion, device=DEVICE, eval_epochs=EVAL_EPOCHS)
+    # Define the loss function and optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=STEP_SIZE, gamma=GAMMA)
 
-model_dir = save_model(model, acc=eval_results['test_acc'],
-                       hyperparameters=hyperparameters, total_time=total_time)
+    # Set seed for reproducibility
+    set_seeds(SEED)
 
-# Plot the results
-plot_loss_curves(results, model_dir=model_dir)
+    # Start the timer
+    start = timer()
 
-classes = train_dataset.classes
+    # Train the model
+    results = train(model, train_loader, test_loader, criterion, optimizer, epochs=EPOCHS, device=DEVICE)
 
-# Plot accuracy per class
-plot_accuracy_per_class(results, classes=classes, model_dir=model_dir)
+    # End the timer
+    end = timer()
+    total_time = print_train_time(start, end, device=DEVICE)
 
-# Plot confusion matrix
-plot_confusion_matrix(eval_results, classes=classes, model_dir=model_dir)
+    # Evaluate the model
+    eval_results = evaluate(model, test_loader, criterion, device=DEVICE, eval_epochs=EVAL_EPOCHS)
+
+    model_dir = save_model(model, acc=eval_results['test_acc'],
+                        hyperparameters=hyperparameters, total_time=total_time)
+
+    # Plot the results
+    plot_loss_curves(results, model_dir=model_dir)
+
+    classes = train_dataset.classes
+
+    # Plot confusion matrix
+    plot_confusion_matrix(eval_results, classes=classes, model_dir=model_dir)
+
+
+if __name__ == '__main__':
+    main()
