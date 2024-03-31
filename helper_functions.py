@@ -520,7 +520,7 @@ def save_model(module, acc=None, hyperparameters=None, total_time=None):
         os.makedirs(base_dir)
 
     # Create the sub folder for the model if it doesn't exist
-    model_dir = os.path.join(base_dir, f"{model_name}_accuracy[{acc*100:.2f}%]")
+    model_dir = os.path.join(base_dir, f"{model_name}_accuracy[{acc*100:.2f}%]_{hyperparameters['DEVICE']}")
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
