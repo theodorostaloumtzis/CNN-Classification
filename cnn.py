@@ -10,10 +10,6 @@ def insert_info():
     """
 
     print("This project is about classifying MRI images using a Convolutional Neural Network (CNN).")
-    print("The author of this project is: ")
-    print("Name: Taloumtzis Theodoros")
-    print("Email: taloumtzistheodoros@gmail.com")
-
     batch_size = int(input("Enter the batch size normal inputs(8/16/32): "))
     epochs = int(input("Enter the number of epochs for training: "))
     learning_rate = float(input("Enter the learning rate for the optimizer: "))
@@ -22,6 +18,31 @@ def insert_info():
 
     return batch_size, epochs, learning_rate, hidden_units, size
 
+def select_model():
+    """
+    Select the model to train and evaluate.
+    """
+    print("Select the model to train and evaluate:")
+    print("1. MRI_classification_CNN")
+    print("2. EfficientNet")
+    model = int(input("Enter the model number: "))
+
+    #do while to check input
+    while model not in [1, 2]:
+        model = int(input("Invalid model number. Please select a valid model number: "))
+    
+    
+    if model == 1:
+        model_name = "MRI_classification_CNN"
+
+    elif model == 2:
+        model_name = input("Enter the model name(b0/b1/b2/b3/b4/b5/b6/b7): ")
+        while model_name not in ["b0", "b1", "b2", "b3", "b4", "b5", "b6", "b7"]:
+            model_name = input("Invalid model name. Please select a valid model name: ")
+    else:
+        raise ValueError("Invalid model number. Please select a valid model number.")
+
+    return model, model_name
 
 # Define the main function
 def main():
@@ -29,6 +50,7 @@ def main():
     Main function to train and evaluate the model.
     """
     batch_size, epochs, learning_rate, hidden_units, size = insert_info()
+    model_type, model_name = select_model()
 
     # Define the hyperparameters
     TRAIN_DIR = 'data/Training' # Path to the training directory
@@ -82,7 +104,11 @@ def main():
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
     # Create the model
-    model = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(DEVICE)
+    if model_type == 1:
+        model = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(DEVICE)
+
+    elif model_type == 2:
+        model = EfficientNet(model_name, NUM_CLASSES).to(DEVICE)
 
     # Define the loss function and optimizer
     criterion = nn.CrossEntropyLoss()
