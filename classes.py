@@ -109,6 +109,10 @@ class MRI_classification_CNN(nn.Module):
             nn.ReLU()
         )
         self.conv3 = nn.Sequential(
+            nn.Conv2d(hidden_units * 3, hidden_units * 2, kernel_size=3, stride=1, padding=1),
+            nn.ReLU()
+        )
+        self.conv4 = nn.Sequential(
             nn.Conv2d(hidden_units * 2, hidden_units, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2)
@@ -120,9 +124,7 @@ class MRI_classification_CNN(nn.Module):
         self.fc1 = nn.Sequential(
             nn.Linear(self.fc_input_size, 192),
             nn.ReLU(),
-            nn.Linear(192, 64),
-            nn.ReLU(),
-            nn.Linear(64, output_shape)
+            nn.Linear(192, output_shape)
         )
 
     def forward(self, x):
@@ -130,6 +132,7 @@ class MRI_classification_CNN(nn.Module):
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
+        x = self.conv4(x)
         x = x.view(x.size(0), -1)  # Flatten for fully connected layers
         x = self.fc1(x)
         return x
