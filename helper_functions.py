@@ -10,6 +10,7 @@ from tqdm.auto import tqdm
 import requests
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
+import shutil
 
 def walk_through_dir(dir_path):
     """
@@ -590,6 +591,15 @@ def find_classes(directory: str) -> Tuple[List[str], Dict[str, int]]:
     class_to_idx = {class_name: i for i, class_name in enumerate(classes)}
     return classes, class_to_idx
 
+def finds_classes(targ_dirs: List[str]) -> Tuple[List[str], Dict[str, int]]:
+    classes = sorted(entry.name for targ_dir in targ_dirs for entry in os.scandir(targ_dir) if entry.is_dir())
+
+    if not classes:
+        raise FileNotFoundError(f"Couldn't find any class folder in {targ_dirs}.")
+
+    class_to_idx = {class_name: i for i, class_name in enumerate(classes)}
+    return classes, class_to_idx
+
 # Plot the accuracy per class
 def plot_accuracy_per_class(results, classes=None, model_dir=None):
     """Plots the accuracy per class over epochs.
@@ -745,4 +755,7 @@ def plot_confusion_matrix(results, classes=None, model_dir=None):
         plt.savefig(os.path.join(model_dir, 'accuracy_per_class.png'))
     
     plt.show()
+
+
+        
 

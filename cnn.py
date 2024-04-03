@@ -4,20 +4,6 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from timeit import default_timer as timer
 
-def insert_info():
-    """
-    Insert the information about the project and the author.
-    """
-
-    print("This project is about classifying MRI images using a Convolutional Neural Network (CNN).")
-    batch_size = int(input("Enter the batch size normal inputs(8/16/32): "))
-    epochs = int(input("Enter the number of epochs for training: "))
-    learning_rate = float(input("Enter the learning rate for the optimizer: "))
-    hidden_units = int(input("Enter the number of hidden units in the fully connected layer: "))
-    size = int(input("Enter the size of the images: "))
-
-    return batch_size, epochs, learning_rate, hidden_units, size
-
 def select_model():
     """
     Select the model to train and evaluate.
@@ -49,21 +35,20 @@ def main():
     """
     Main function to train and evaluate the model.
     """
-    batch_size, epochs, learning_rate, hidden_units, size = insert_info()
     model_type, model_name = select_model()
 
     # Define the hyperparameters
-    TRAIN_DIR = 'data/Training' # Path to the training directory
-    TEST_DIR = 'data/Testing' # Path to the testing directory
-    BATCH_SIZE = batch_size # Batch size for the dataloaders
+    DATA_DIR = 'data' # Path to the data directory
+    BATCH_SIZE = 8 # Batch size for the dataloaders
     IN_CHANNELS = 3 # Number of input channels
-    HIDDEN_UNITS = hidden_units  # Number of hidden units in the fully connected layer
+    HIDDEN_UNITS = 16  # Number of hidden units in the fully connected layer
     NUM_CLASSES = 4 # Number of classes in the dataset
-    SIZE = size # Size of the images
-    LEARNING_RATE = learning_rate # Learning rate for the optimizer
-    EPOCHS = epochs # Number of epochs to train the model
+    SIZE = 224 # Size of the images
+    LEARNING_RATE = 0.001 # Learning rate for the optimizer
+    EPOCHS = 10 # Number of epochs to train the model
+    K_FOLDS = 6 # Number of folds for K-Fold Cross Validation
     GAMMA = 0.1 # Multiplicative factor of learning rate decay
-    STEP_SIZE = 5 # Step size for the learning rate scheduler
+    STEP_SIZE = 6 # Step size for the learning rate scheduler
     WEIGHT_DECAY = 0.025 # Weight decay for the optimizer
     SEED = 42 # Seed for reproducibility
     EVAL_EPOCHS = 10  # Number of epochs to evaluate the model on the test set
@@ -94,15 +79,6 @@ def main():
         transforms.RandomRotation(RANDOM_ROTATION),
         transforms.ToTensor()
     ])
-
-    # Create the datasets
-    train_dataset = CustomDataset(TRAIN_DIR, transform=transform)
-    test_dataset = CustomDataset(TEST_DIR, transform=transform)
-
-    # Create the dataloaders
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
-
     # Create the model
     if model_type == 1:
         model = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(DEVICE)
@@ -115,33 +91,47 @@ def main():
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=STEP_SIZE, gamma=GAMMA)
 
-    # Set seed for reproducibility
-    set_seeds(SEED)
+    # Create the combined dataset
+    combine_and_rename_images(DATA_DIR)
 
-    # Start the timer
-    start = timer()
 
-    # Train the model
-    results = train(model, train_loader, test_loader, criterion, optimizer, epochs=EPOCHS, device=DEVICE)
+    # Create folded dataset 
+    out_dir, fold_dirs = create_folds('Combined', f'K_Folded_{K_FOLDS}', K_FOLDS)
 
-    # End the timer
-    end = timer()
-    total_time = print_train_time(start, end, device=DEVICE)
+    fold_datasets = []
+    fold_dataloaders = []
 
-    # Evaluate the model
-    eval_results = evaluate(model, test_loader, criterion, device=DEVICE, eval_epochs=EVAL_EPOCHS)
+    # Create the fold dataloder
+    for i in range(K_FOLDS):
+        fold_dataset = CustomDataset(fold_dirs[i], transform=transform)
+        fold_dataloader = DataLoader(fold_dataset, batch_size=BATCH_SIZE, shuffle=True)
+        fold_datasets.append(fold_dataset)
+        fold_dataloaders.append(fold_dataloader)
 
-    model_dir = save_model(model, acc=eval_results['test_acc'],
-                        hyperparameters=hyperparameters, total_time=total_time)
+        
+    model_array = [model for i in range(K_FOLDS)]
+    res_per_fold_combination = []
 
-    # Plot the results
-    plot_loss_curves(results, model_dir=model_dir)
+    for i in range(K_FOLDS):
+        print(f"Fold {i + 1}:")
+        train_loader =  fold_dataloaders[:i] + fold_dataloaders[i + 1:]
+        val_loader =  fold_dataloaders[i]
 
-    classes = train_dataset.classes
+        # Train the model
+        results = fold_train(model_array[i], train_loader, val_loader, criterion, optimizer, EPOCHS, DEVICE, K_FOLDS, scheduler)
 
-    # Plot confusion matrix
-    plot_confusion_matrix(eval_results, classes=classes, model_dir=model_dir)
+        res_per_fold_combination.append(results)
 
+
+
+    # Compare witch model is the best one
+    for i in range(len(res_per_fold_combination)):  
+        print(f"Fold {i + 1}:")
+        print(f"Training Accuracy: {res_per_fold_combination[i]['train_acc'][-1]:.4f}")
+        print(f"Validation Accuracy: {res_per_fold_combination[i]['test_acc'][-1]:.4f}")
+        print(f"Training Loss: {res_per_fold_combination[i]['train_loss'][-1]:.4f}")
+        print(f"Validation Loss: {res_per_fold_combination[i]['test_loss'][-1]:.4f}")
+        
 
 if __name__ == '__main__':
     main()

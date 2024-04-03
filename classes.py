@@ -41,6 +41,7 @@ class CustomDataset(Dataset):
         # Create class to index mapping
         self.classes, self.class_to_idx = find_classes(targ_dir)
 
+
     def load_image(self, index: str) -> Image.Image:
         image_path = self.paths[index]
         return Image.open(image_path)
@@ -59,14 +60,46 @@ class CustomDataset(Dataset):
         else:
             return image, class_idx  # return image and class index (X, y) untransformed
 
+class CustomFoldDataset(Dataset):
+    def __init__(self,
+                 targ_dirs: List[str],
+                 transform=None):
+        self.paths = []
+        for targ_dir in targ_dirs:
+            self.paths += list(pathlib.Path(targ_dir).glob('*/*.jpg'))
+        # Setup transform
+        self.transform = transform
+        # Create class to index mapping for all tatget directories
+        self.classes, self.class_to_idx = find_classes(targ_dirs[0])
+        
+
+    def load_image(self, index: str) -> Image.Image:
+        image_path = self.paths[index]
+        return Image.open(image_path)
+    
+    def __len__(self) -> int:
+        return len(self.paths)
+    
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, int]:
+        """Returns the image and class label at the given index"""
+        image = self.load_image(index)
+        class_name = self.paths[index].parent.name
+        class_idx = self.class_to_idx[class_name]
+
+        if self.transform:
+            return self.transform(image), class_idx
+        else:
+            return image, class_idx
+
+
 
 class MRI_classification_CNN(nn.Module):
 
-    def __init__(self, input_shape: int, hidden_units: int, output_shape: int, size: int):
+    def __init__(self, input_channels: int, hidden_units: int, output_shape: int, size: int):
         super().__init__()
         self.name = "MRI_classification_CNN"
         self.conv1 = nn.Sequential(
-            nn.Conv2d(input_shape, hidden_units * 3, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(input_channels, hidden_units * 3, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(hidden_units * 3),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2)
@@ -81,8 +114,11 @@ class MRI_classification_CNN(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2)
         )
 
+        # Calculate the output size after convolution layers
+        self.fc_input_size = hidden_units * (size // 4) * (size // 4)  # Assuming two maxpool layers
+
         self.fc1 = nn.Sequential(
-            nn.Linear(hidden_units * size // 4 * size // 4, 192),
+            nn.Linear(self.fc_input_size, 192),
             nn.ReLU(),
             nn.Linear(192, 64),
             nn.ReLU(),
@@ -90,15 +126,17 @@ class MRI_classification_CNN(nn.Module):
         )
 
     def forward(self, x):
+        # Expected input shape: (batch_size, input_channels, height, width)
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
-        x = x.view(x.size(0), -1)
+        x = x.view(x.size(0), -1)  # Flatten for fully connected layers
         x = self.fc1(x)
         return x
     
     def get_name(self):
         return self.name
+
 
 
 class ConvBlock(nn.Module):
