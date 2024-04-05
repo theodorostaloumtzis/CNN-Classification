@@ -1,8 +1,11 @@
 from torch.utils.data import Dataset
 from PIL import Image
-from helper_functions import *
 from math import ceil
 import pathlib
+import torch.nn as nn
+import typing
+from helper_functions import find_classes
+import torch
 
 basic_mb_params = [
     # k, channels(c), repeats(t), stride(s), kernel_size(k)
@@ -41,7 +44,6 @@ class CustomDataset(Dataset):
         # Create class to index mapping
         self.classes, self.class_to_idx = find_classes(targ_dir)
 
-
     def load_image(self, index: str) -> Image.Image:
         image_path = self.paths[index]
         return Image.open(image_path)
@@ -49,7 +51,7 @@ class CustomDataset(Dataset):
     def __len__(self) -> int:
         return len(self.paths)
 
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, int]:
+    def __getitem__(self, index: int) -> typing.Tuple[torch.Tensor, int]:
         """Returns the image and class label at the given index"""
         image = self.load_image(index)
         class_name = self.paths[index].parent.name  # extract class name from parent folder data/class_name/image.jpg
@@ -59,37 +61,70 @@ class CustomDataset(Dataset):
             return self.transform(image), class_idx  # return transformed image and class index (X, y)
         else:
             return image, class_idx  # return image and class index (X, y) untransformed
+        
+    
 
 class CustomFoldDataset(Dataset):
     def __init__(self,
-                 targ_dirs: List[str],
+                 targ_dir, 
+                 classes: typing.Dict[str, int],
                  transform=None):
         self.paths = []
-        for targ_dir in targ_dirs:
-            self.paths += list(pathlib.Path(targ_dir).glob('*/*.jpg'))
+        self.paths = list(pathlib.Path(targ_dir).glob('*.jpg'))
         # Setup transform
         self.transform = transform
-        # Create class to index mapping for all tatget directories
-        self.classes, self.class_to_idx = find_classes(targ_dirs[0])
-        
+
+        # initialize the data list the has the loaded images and their corresponding class index to a list named targets
+        self.targets = []
+        self.data = []
+        for i in range(self.__len__()):
+            image = self.load_image(i)
+            class_idx = self.paths[i].name.split('_')[0]
+            self.targets.append(class_idx)
+            if self.transform:
+                image = self.transform(image)
+            self.data.append(image)
+
 
     def load_image(self, index: str) -> Image.Image:
         image_path = self.paths[index]
         return Image.open(image_path)
-    
+
+
     def __len__(self) -> int:
         return len(self.paths)
-    
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, int]:
-        """Returns the image and class label at the given index"""
-        image = self.load_image(index)
-        class_name = self.paths[index].parent.name
-        class_idx = self.class_to_idx[class_name]
 
-        if self.transform:
-            return self.transform(image), class_idx
-        else:
-            return image, class_idx
+
+    def __getitem__(self, index: int) -> typing.Tuple[torch.Tensor, int]:
+        """Returns the image and class label at the given index"""
+        return self.data[index], self.targets[index]  
+    
+
+    def get_data_targets(self):
+        return self.data, self.targets
+    
+
+    # split the dataset into train and test randomly
+    def split_dataset(self, train_size: float):
+        # calculate the size of the training dataset
+        train_len = int(train_size * len(self))
+        # calculate the size of the test dataset
+        test_len = len(self) - train_len
+        # split the dataset into train and test
+        train_dataset, test_dataset = torch.utils.data.random_split(self, [train_len, test_len])
+
+
+# Define a custom dataset class
+class FoldDataset(Dataset):
+    def __init__(self, data, labels):
+        self.data = data
+        self.labels = torch.tensor(labels, dtype=torch.long)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        return self.data[index], self.labels[index]
 
 
 
@@ -109,7 +144,7 @@ class MRI_classification_CNN(nn.Module):
             nn.ReLU()
         )
         self.conv3 = nn.Sequential(
-            nn.Conv2d(hidden_units * 3, hidden_units * 2, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(hidden_units * 2, hidden_units * 2, kernel_size=3, stride=1, padding=1),
             nn.ReLU()
         )
         self.conv4 = nn.Sequential(
@@ -117,7 +152,6 @@ class MRI_classification_CNN(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2)
         )
-
         # Calculate the output size after convolution layers
         self.fc_input_size = hidden_units * (size // 4) * (size // 4)  # Assuming two maxpool layers
 
@@ -136,7 +170,7 @@ class MRI_classification_CNN(nn.Module):
         x = x.view(x.size(0), -1)  # Flatten for fully connected layers
         x = self.fc1(x)
         return x
-    
+
     def get_name(self):
         return self.name
 
@@ -199,7 +233,7 @@ class SqueezeExcitation(nn.Module):
 
     def forward(self, x):
         return x * self.se(x)
-    
+
 
 
 class EfficientNet(nn.Module):
@@ -247,6 +281,6 @@ class EfficientNet(nn.Module):
     def forward(self, x):
         x = self.avgpool(self.extractor(x))
         return self.classifier(self.flatten(x))
-    
+
     def get_name(self):
         return self.name

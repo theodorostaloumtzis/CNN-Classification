@@ -1,90 +1,97 @@
-import datetime
-import torch
-import matplotlib.pyplot as plt
 import numpy as np
-from torch import nn
 import os
-import zipfile
-from pathlib import Path
-from tqdm.auto import tqdm
-import requests
-import seaborn as sns
-from sklearn.metrics import confusion_matrix
 import shutil
-from torch.utils.data import ConcatDataset
+from helper_functions import train
+import torch
+from tqdm.auto import tqdm
 
 
-def combine_and_rename_images(data_dir):
+def combine_and_rename_images(data_dir, classes):
     # Create a combined directory for both training and testing sets
-    combined_dir = os.path.join(data_dir, 'Combined')
+
+    combined_dir = 'Combined'
     os.makedirs(combined_dir, exist_ok=True)
-    
+
+    count_classes = {
+        'glioma_tumor': 0,
+        'meningioma_tumor': 0,
+        'no_tumor': 0,
+        'pituitary_tumor': 0
+    }
     # Iterate through training and testing directories
     for subset in ['Training', 'Testing']:
-        subset_dir = os.path.join(data_dir, subset)
-        for class_dir in os.listdir(subset_dir):
-            class_path = os.path.join(subset_dir, class_dir)
-            if os.path.isdir(class_path):
-                # Create a subdirectory for the class within the combined directory
-                combined_class_dir = os.path.join(combined_dir, class_dir)
-                os.makedirs(combined_class_dir, exist_ok=True)
-                
-                # Iterate through images in each class directory
-                image_files = os.listdir(class_path)
-                for i, image_file in enumerate(image_files):
-                    old_image_path = os.path.join(class_path, image_file)
-                    # Rename the image file
-                    new_image_name = f"{class_dir}_{i+1}.jpg"  # Assuming images are in jpg format
-                    new_image_path = os.path.join(combined_class_dir, new_image_name)
-                    shutil.copyfile(old_image_path, new_image_path)
-    
+        subset_path = os.path.join(data_dir, subset)
+        for class_dir in os.listdir(subset_path):
+            class_path = os.path.join(subset_path, class_dir)
+            for image in os.listdir(class_path):
+                # Get the class of the original image
+                old_image_path = os.path.join(class_path, image)
+
+                # Get the new name of the image
+                new_image_name = f"{classes[class_dir]}_{count_classes[class_dir]}.jpg"
+                count_classes[class_dir] += 1
+
+                # Get the path of the new image
+                new_image_path = os.path.join(combined_dir, new_image_name)
+
+                # Copy the image to the combined directory
+                shutil.copy(old_image_path, new_image_path)
+
     print("Images combined and renamed successfully.")
     return combined_dir
 
+def split_to_train_test(data_dir, train_size, seed=None):
+    # Create the training and testing directories
+    train_dir = 'Dataset/Training'
+    test_dir = 'Dataset/Testing'
+    os.makedirs(train_dir, exist_ok=True)
+    os.makedirs(test_dir, exist_ok=True)
 
-def create_folds(data_dir: str, output_dir: str, k_folds: int):
-    # Create the output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
+    loaded_images_paths = {
+        '0': [],
+        '1': [],
+        '2': [],
+        '3': []
+    }
 
-    # Get list of class directories
-    class_dirs = [d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))]
-    class_dirs.sort()
+    # Load the images
+    for image in os.listdir(data_dir):
+        class_idx = image.split('_')[0]
+        image_path = os.path.join(data_dir, image)
+        loaded_images_paths[class_idx].append(image_path)
 
-    # Calculate number of images per class per fold
-    num_images_per_class = {}
-    for class_dir in class_dirs:
-        num_images = len(os.listdir(os.path.join(data_dir, class_dir)))
-        num_images_per_fold = num_images // k_folds
-        num_images_per_class[class_dir] = num_images_per_fold
+    # Calculate the training and testing sizes
+    train_len = {class_idx: int(train_size * len(loaded_images_paths[class_idx])) for class_idx in loaded_images_paths}
 
-    # Create the number of the folders for each fold
-    for fold in range(k_folds):
-        fold_dir = os.path.join(output_dir, f"Fold_{fold+1}")
-        os.makedirs(fold_dir, exist_ok=True)
+    if seed:
+        np.random.seed(seed)
+    # Move the images to the training directory
+    for class_idx, image_paths in loaded_images_paths.items():
+        count = 0 
+        while train_len[class_idx] >= count:
+            # Get a random image
+            random_image = np.random.choice(image_paths)
+            # Get the new image path
+            new_image_path = os.path.join(train_dir, os.path.basename(random_image))
+            # Move the image to the training directory
+            shutil.move(random_image, new_image_path)
+            # Remove the image from the list
+            image_paths.remove(random_image)
+            count += 1
 
-        # Create a subdirectory for each class in the fold
-        for class_dir in class_dirs:
-            class_dir_path = os.path.join(fold_dir, class_dir)
-            os.makedirs(class_dir_path, exist_ok=True)
+    # Move the remaining images to the testing directory
+    remaining_images = os.listdir(data_dir)
+    for image in remaining_images:
+        image_path = os.path.join(data_dir, image)
+        new_image_path = os.path.join(test_dir, image)
+        shutil.move(image_path, new_image_path)
 
-            # Copy the images to the class directory
-            num_images_per_fold = num_images_per_class[class_dir]
-            start_index = fold * num_images_per_fold
-            end_index = start_index + num_images_per_fold
-            image_files = os.listdir(os.path.join(data_dir, class_dir))
-            for image_file in image_files[start_index:end_index]:
-                image_path = os.path.join(data_dir, class_dir, image_file)
-                shutil.copy(image_path, class_dir_path)
-
-
-    print(f"{k_folds} folds created successfully.")
-
-    fold_dirs = [os.path.join(output_dir, f"Fold_{fold+1}") for fold in range(k_folds)]
-    return output_dir, fold_dirs
+    print("Images split into training and testing sets successfully.")
+    return train_dir, test_dir
 
 
 # Training step
-def train_step_fold(model: torch.nn.Module,
+def train_step(model: torch.nn.Module,
                data_loader: torch.utils.data.DataLoader,
                loss_fn: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
@@ -103,10 +110,10 @@ def train_step_fold(model: torch.nn.Module,
     # Wrap the data loader with tqdm
     with tqdm(total=len(data_loader), desc=f'[Epoch {ep+1}/{EPOCHS}] Training') as pbar:
         # Loop over the training batches
-        for batch, (X, y) in enumerate((data_loader)):
+        for batch, (X, y) in enumerate(data_loader):
             # Put data on target device
             X, y = X.to(device), y.to(device)
-            
+
             # Forward pass
             y_pred = model(X)
 
@@ -132,7 +139,7 @@ def train_step_fold(model: torch.nn.Module,
             all_targets.extend(y.cpu().numpy())
                 
             # Update tqdm progress bar
-            pbar.postfix = f"Loss: {train_loss/(batch+1):.4f} | Accuracy: {(train_acc/(batch+1))*100:.4f}%"
+            pbar.postfix = f"Loss: {train_loss/(batch+1):.4f} | Accuracy: {(train_acc/(batch+1))*100:.2f}%"
             pbar.update(1)
 
     # Calculate average loss and accuracy
@@ -143,7 +150,7 @@ def train_step_fold(model: torch.nn.Module,
 
 
 # Testing step
-def test_step_fold(model: torch.nn.Module,
+def test_step(model: torch.nn.Module,
               data_loader: torch.utils.data.DataLoader,
               loss_fn: torch.nn.Module,
               device,
@@ -182,7 +189,7 @@ def test_step_fold(model: torch.nn.Module,
                 all_targets.extend(y.cpu().numpy())
 
                 # Update tqdm progress bar
-                pbar.postfix = f"Loss: {test_loss/(batch+1):.4f} | Accuracy: {(test_acc/(batch+1))*100:.4f}%"
+                pbar.postfix = f"Loss: {test_loss/(batch+1):.4f} | Accuracy: {(test_acc/(batch+1))*100:.2f}%"
                 pbar.update(1)
 
         # Adjust metrics to get the average loss and accuracy
@@ -194,18 +201,15 @@ def test_step_fold(model: torch.nn.Module,
 
 
 # Training and testing the model
-def fold_train(model: torch.nn.Module,
+def train_fold(model: torch.nn.Module,
           train_loader: torch.utils.data.DataLoader,
           test_loader: torch.utils.data.DataLoader,
           loss_fn: torch.nn.Module,
           optimizer: torch.optim.Optimizer,
           epochs: int,
           device,
-          k_folds,
           scheduler: torch.optim.lr_scheduler = None):
     """ Train the model and evaluate on the test set."""
-
-    
 
     # Track the losses and accuracies
     results = {
@@ -213,35 +217,33 @@ def fold_train(model: torch.nn.Module,
         'train_acc': [],
         'test_loss': [],
         'test_acc': [],
+        'all_preds': [],
+        'all_targets': [],
         'train_all_preds': [[]],
         'train_all_targets': [[]],
-        'test_all_preds': [[]],
-        'test_all_targets': [[]]
-        
+        'test_all_preds': [[] ],
+        'test_all_targets': [[] ]
     }
+
     # Train the model
     for epoch in range(epochs):
-        # Train the model on the training set
-        train_loss, train_acc, train_all_preds, train_all_targets = train_step_fold(model=model,
-                                                                            data_loader=train_loader,
-                                                                            loss_fn=loss_fn,
-                                                                            optimizer=optimizer,
-                                                                            device=device,
-                                                                            ep=epoch,
-                                                                            EPOCHS=epochs)
-
+        train_loss, train_acc, train_all_preds, train_all_targets = train_step(model=model,
+                                                                                data_loader=train_loader,
+                                                                                loss_fn=loss_fn,
+                                                                                optimizer=optimizer,
+                                                                                device=device,
+                                                                                ep=epoch,
+                                                                                EPOCHS=epochs)
 
         # Evaluate the model on the test set
-        test_loss, test_acc, test_all_preds, test_all_targets = test_step_fold(model=model,
+        test_loss, test_acc, test_all_preds, test_all_targets = test_step(model=model,
                                                                             data_loader=test_loader,
                                                                             loss_fn=loss_fn,
                                                                             device=device,
                                                                             ep=epoch,
                                                                             EPOCHS=epochs)
-        
-        
-        
-        # Append the results
+
+        # Save the results
         results['train_loss'].append(train_loss)
         results['train_acc'].append(train_acc)
         results['test_loss'].append(test_loss)
@@ -251,10 +253,48 @@ def fold_train(model: torch.nn.Module,
         results['test_all_preds'].append(test_all_preds)
         results['test_all_targets'].append(test_all_targets)
 
-
     # Step the scheduler
     if scheduler:
         scheduler.step()
 
     return results
-        
+
+# Evaluate the model
+def evaluate_fold(model: torch.nn.Module,
+             data_loader: torch.utils.data.DataLoader,
+             loss_fn: torch.nn.Module,
+             device,
+             eval_epochs: int = 1):
+    """ Evaluate the model on the test set."""
+
+    # Evaluation dict
+    eval_results = {
+        'test_loss': 0,
+        'test_acc': 0,
+        'all_preds': [],
+        'all_targets': []
+    }
+    
+    for i in range(eval_epochs):
+        test_loss, test_acc, all_preds, all_targets = test_step(model=model,
+                                                                data_loader=data_loader,
+                                                                loss_fn=loss_fn,
+                                                                device=device,
+                                                                ep=i,
+                                                                EPOCHS=eval_epochs)
+
+        eval_results['test_loss'] += test_loss
+        eval_results['test_acc'] += test_acc
+        eval_results['all_preds'].extend(all_preds)
+        eval_results['all_targets'].extend(all_targets)
+
+
+    # Average the results
+    eval_results['test_loss'] /= eval_epochs
+    eval_results['test_acc'] /= eval_epochs
+
+    # Print the results
+    print("Evaluation results")
+    print(f"Test Loss: {eval_results['test_loss']:.4f} | Test Acc: {eval_results['test_acc']*100:.2f}%")
+
+    return eval_results

@@ -2,7 +2,6 @@ import datetime
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
-from torch import nn
 import os
 import zipfile
 from pathlib import Path
@@ -10,7 +9,6 @@ from tqdm.auto import tqdm
 import requests
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
-import shutil
 
 def walk_through_dir(dir_path):
     """
@@ -325,7 +323,7 @@ def train_step(model: torch.nn.Module,
         for batch, (X, y) in enumerate(data_loader):
             # Put data on target device
             X, y = X.to(device), y.to(device)
-
+            
             # Forward pass
             y_pred = model(X)
 
@@ -717,7 +715,7 @@ def plot_confusion_matrix(results, classes=None, model_dir=None):
         return
 
     # Calculate confusion matrix
-    cm = confusion_matrix(all_targets, all_preds)
+    cm = confusion_matrix(all_preds, all_targets)
 
     # Clacula accuracy per class
     class_accuracy = cm.diagonal() / cm.sum(axis=1)

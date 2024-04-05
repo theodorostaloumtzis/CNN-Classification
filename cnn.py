@@ -79,6 +79,15 @@ def main():
         transforms.RandomRotation(RANDOM_ROTATION),
         transforms.ToTensor()
     ])
+
+    # Load the dataset
+    train_dataset = CustomDataset('data/Training', transform=transform)
+    test_dataset = CustomDataset('data/Testing', transform=transform)
+
+    # Create the dataloaders
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+
     # Create the model
     if model_type == 1:
         model = MRI_classification_CNN(IN_CHANNELS, HIDDEN_UNITS, NUM_CLASSES, SIZE).to(DEVICE)
@@ -91,46 +100,27 @@ def main():
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=STEP_SIZE, gamma=GAMMA)
 
-    # Create the combined dataset
-    combine_and_rename_images(DATA_DIR)
+    # Train the model
+    start = timer()
 
+    results = train(model, train_loader, test_loader, criterion, optimizer, EPOCHS, DEVICE, scheduler)
 
-    # Create folded dataset 
-    out_dir, fold_dirs = create_folds('Combined', f'K_Folded_{K_FOLDS}', K_FOLDS)
+    end = timer()
 
-    fold_datasets = []
-    fold_dataloaders = []
+    # Print the results
+    total_time = print_train_time(start, end)
 
-    # Create the fold dataloder
-    for i in range(K_FOLDS):
-        fold_dataset = CustomDataset(fold_dirs[i], transform=transform)
-        fold_dataloader = DataLoader(fold_dataset, batch_size=BATCH_SIZE, shuffle=True)
-        fold_datasets.append(fold_dataset)
-        fold_dataloaders.append(fold_dataloader)
+    # Evaluate the model
+    eval_res = evaluate(model, test_loader, criterion, DEVICE)
 
-        
-    model_array = [model for i in range(K_FOLDS)]
-    res_per_fold_combination = []
-
-    for i in range(K_FOLDS):
-        print(f"Fold {i + 1}:")
-        train_loader =  fold_dataloaders[:i] + fold_dataloaders[i + 1:]
-        val_loader =  fold_dataloaders[i]
-
-        # Train the model
-        results = fold_train(model_array[i], train_loader, val_loader, criterion, optimizer, EPOCHS, DEVICE, K_FOLDS, scheduler)
-
-        res_per_fold_combination.append(results)
+    # Save the model
+    save_model(model, model_name, total_time, hyperparameters, results)
 
 
 
-    # Compare witch model is the best one
-    for i in range(len(res_per_fold_combination)):  
-        print(f"Fold {i + 1}:")
-        print(f"Training Accuracy: {res_per_fold_combination[i]['train_acc'][-1]:.4f}")
-        print(f"Validation Accuracy: {res_per_fold_combination[i]['test_acc'][-1]:.4f}")
-        print(f"Training Loss: {res_per_fold_combination[i]['train_loss'][-1]:.4f}")
-        print(f"Validation Loss: {res_per_fold_combination[i]['test_loss'][-1]:.4f}")
+
+
+    
         
 
 if __name__ == '__main__':
