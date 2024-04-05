@@ -1,10 +1,6 @@
 from torch.utils.data import Dataset
-from PIL import Image
 from math import ceil
-import pathlib
 import torch.nn as nn
-import typing
-from helper_functions import find_classes
 import torch
 
 basic_mb_params = [
@@ -33,91 +29,10 @@ scale_values = {
 }
 
 
-# Define the dataset class
-class CustomDataset(Dataset):
-    def __init__(self,
-                 targ_dir: str,
-                 transform=None):
-        self.paths = list(pathlib.Path(targ_dir).glob('*/*.jpg'))
-        # Setup transform
-        self.transform = transform
-        # Create class to index mapping
-        self.classes, self.class_to_idx = find_classes(targ_dir)
-
-    def load_image(self, index: str) -> Image.Image:
-        image_path = self.paths[index]
-        return Image.open(image_path)
-
-    def __len__(self) -> int:
-        return len(self.paths)
-
-    def __getitem__(self, index: int) -> typing.Tuple[torch.Tensor, int]:
-        """Returns the image and class label at the given index"""
-        image = self.load_image(index)
-        class_name = self.paths[index].parent.name  # extract class name from parent folder data/class_name/image.jpg
-        class_idx = self.class_to_idx[class_name]
-
-        if self.transform:
-            return self.transform(image), class_idx  # return transformed image and class index (X, y)
-        else:
-            return image, class_idx  # return image and class index (X, y) untransformed
-        
-    
-
-class CustomFoldDataset(Dataset):
-    def __init__(self,
-                 targ_dir, 
-                 classes: typing.Dict[str, int],
-                 transform=None):
-        self.paths = []
-        self.paths = list(pathlib.Path(targ_dir).glob('*.jpg'))
-        # Setup transform
-        self.transform = transform
-
-        # initialize the data list the has the loaded images and their corresponding class index to a list named targets
-        self.targets = []
-        self.data = []
-        for i in range(self.__len__()):
-            image = self.load_image(i)
-            class_idx = self.paths[i].name.split('_')[0]
-            self.targets.append(class_idx)
-            if self.transform:
-                image = self.transform(image)
-            self.data.append(image)
-
-
-    def load_image(self, index: str) -> Image.Image:
-        image_path = self.paths[index]
-        return Image.open(image_path)
-
-
-    def __len__(self) -> int:
-        return len(self.paths)
-
-
-    def __getitem__(self, index: int) -> typing.Tuple[torch.Tensor, int]:
-        """Returns the image and class label at the given index"""
-        return self.data[index], self.targets[index]  
-    
-
-    def get_data_targets(self):
-        return self.data, self.targets
-    
-
-    # split the dataset into train and test randomly
-    def split_dataset(self, train_size: float):
-        # calculate the size of the training dataset
-        train_len = int(train_size * len(self))
-        # calculate the size of the test dataset
-        test_len = len(self) - train_len
-        # split the dataset into train and test
-        train_dataset, test_dataset = torch.utils.data.random_split(self, [train_len, test_len])
-
-
 # Define a custom dataset class
-class FoldDataset(Dataset):
+class CustomDataset(Dataset):
     def __init__(self, data, labels):
-        self.data = data
+        self.data = data # List of data
         self.labels = torch.tensor(labels, dtype=torch.long)
 
     def __len__(self):

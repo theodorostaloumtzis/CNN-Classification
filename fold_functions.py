@@ -1,9 +1,10 @@
 import numpy as np
 import os
 import shutil
-from helper_functions import train
 import torch
 from tqdm.auto import tqdm
+from PIL import Image
+import pathlib
 
 
 def combine_and_rename_images(data_dir, classes):
@@ -42,8 +43,9 @@ def combine_and_rename_images(data_dir, classes):
 
 def split_to_train_test(data_dir, train_size, seed=None):
     # Create the training and testing directories
-    train_dir = 'Dataset/Training'
-    test_dir = 'Dataset/Testing'
+    dataset_dir = 'Dataset'
+    train_dir = os.path.join(dataset_dir, 'Train')
+    test_dir = os.path.join(dataset_dir, 'Test')
     os.makedirs(train_dir, exist_ok=True)
     os.makedirs(test_dir, exist_ok=True)
 
@@ -63,12 +65,13 @@ def split_to_train_test(data_dir, train_size, seed=None):
     # Calculate the training and testing sizes
     train_len = {class_idx: int(train_size * len(loaded_images_paths[class_idx])) for class_idx in loaded_images_paths}
 
-    if seed:
-        np.random.seed(seed)
+    
     # Move the images to the training directory
     for class_idx, image_paths in loaded_images_paths.items():
         count = 0 
         while train_len[class_idx] >= count:
+            if seed:
+                np.random.seed(seed)
             # Get a random image
             random_image = np.random.choice(image_paths)
             # Get the new image path
@@ -87,7 +90,7 @@ def split_to_train_test(data_dir, train_size, seed=None):
         shutil.move(image_path, new_image_path)
 
     print("Images split into training and testing sets successfully.")
-    return train_dir, test_dir
+    return dataset_dir, train_dir, test_dir
 
 
 # Training step
@@ -202,13 +205,13 @@ def test_step(model: torch.nn.Module,
 
 # Training and testing the model
 def train_fold(model: torch.nn.Module,
-          train_loader: torch.utils.data.DataLoader,
-          test_loader: torch.utils.data.DataLoader,
-          loss_fn: torch.nn.Module,
-          optimizer: torch.optim.Optimizer,
-          epochs: int,
-          device,
-          scheduler: torch.optim.lr_scheduler = None):
+                train_loader: torch.utils.data.DataLoader,
+                test_loader: torch.utils.data.DataLoader,
+                loss_fn: torch.nn.Module,
+                optimizer: torch.optim.Optimizer,
+                epochs: int,
+                device,
+                scheduler: torch.optim.lr_scheduler = None):
     """ Train the model and evaluate on the test set."""
 
     # Track the losses and accuracies
@@ -217,8 +220,6 @@ def train_fold(model: torch.nn.Module,
         'train_acc': [],
         'test_loss': [],
         'test_acc': [],
-        'all_preds': [],
-        'all_targets': [],
         'train_all_preds': [[]],
         'train_all_targets': [[]],
         'test_all_preds': [[] ],
@@ -298,3 +299,41 @@ def evaluate_fold(model: torch.nn.Module,
     print(f"Test Loss: {eval_results['test_loss']:.4f} | Test Acc: {eval_results['test_acc']*100:.2f}%")
 
     return eval_results
+
+def extract_elements(data_list, indices):
+    """
+    Extract elements from a list based on the given indices.
+
+    Parameters:
+        data_list (list): The list of data.
+        indices (numpy.ndarray): The indices to extract.
+
+    Returns:
+        numpy.ndarray: An array containing the elements corresponding to the indices.
+    """
+    data_array = np.array(data_list)
+    result_array = data_array[indices]
+    return result_array
+
+
+def load_data(dir, transform=None):
+
+    # Load the image paths to numpy array
+    image_paths = list(pathlib.Path(dir).glob('*.jpg'))
+
+    # Create the data and label arrays
+    labels = []
+    data = []
+
+    for i in range(len(image_paths)):
+        image_path = image_paths[i]
+        image = Image.open(image_path)
+        class_idx = image_path.name.split('_')[0]
+        labels.append(class_idx)
+        if transform:
+            image = transform(image)
+        data.append(image)
+
+    labels = np.array(labels).astype(int)
+
+    return data, labels
