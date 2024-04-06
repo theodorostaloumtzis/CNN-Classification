@@ -14,10 +14,11 @@ def select_model():
     print("Select the model to train and evaluate:")
     print("1. MRI_classification_CNN")
     print("2. EfficientNet")
+    print("3. ResNet")
     model = int(input("Enter the model number: "))
 
     #do while to check input
-    while model not in [1, 2]:
+    while model not in [1, 2, 3]:
         model = int(input("Invalid model number. Please select a valid model number: "))
     
     
@@ -27,6 +28,11 @@ def select_model():
     elif model == 2:
         model_name = input("Enter the model name(b0/b1/b2/b3/b4/b5/b6/b7): ")
         while model_name not in ["b0", "b1", "b2", "b3", "b4", "b5", "b6", "b7"]:
+            model_name = input("Invalid model name. Please select a valid model name: ")
+    elif model == 3:
+        
+        model_name = input("Enter the model params(resnet18/resnet34/resnet50/resnet101/resnet152): ")
+        while model_name not in ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152"]:
             model_name = input("Invalid model name. Please select a valid model name: ")
     else:
         raise ValueError("Invalid model number. Please select a valid model number.")
@@ -51,9 +57,9 @@ def main():
     IN_CHANNELS = 3 # Number of input channels
     HIDDEN_UNITS = 16  # Number of hidden units in the fully connected layer
     NUM_CLASSES = 4 # Number of classes in the dataset
-    SIZE = 256 # Size of the images
+    SIZE = 224 # Size of the images
     LEARNING_RATE = 0.001 # Learning rate for the optimizer
-    EPOCHS = 5 # Number of epochs to train the model
+    EPOCHS = 10 # Number of epochs to train the model
     K_FOLDS = 10 # Number of folds for K-Fold Cross Validation
     GAMMA = 0.1 # Multiplicative factor of learning rate decay
     STEP_SIZE = 6 # Step size for the learning rate scheduler
@@ -115,12 +121,23 @@ def main():
         train_loader = DataLoader(CustomDataset(train_data, train_labels), batch_size=BATCH_SIZE, shuffle=True)
         test_loader = DataLoader(CustomDataset(test_data, test_labels), batch_size=BATCH_SIZE, shuffle=False)
 
+        epochs = int(input("Enter the number of epochs: "))
+        while epochs < 1:
+            epochs = int(input("Invalid number of epochs. Please enter a valid number of epochs: "))
+
+        # Update the epochs hyperparameter
+        hyperparameters['EPOCHS'] = epochs
+        EPOCHS = epochs
+
         model = 0
         # Train the model
         if model_type == 1:
             model = MRI_classification_CNN(IN_CHANNELS, NUM_CLASSES, HIDDEN_UNITS, SIZE).to(DEVICE)
         elif model_type == 2:
             model = EfficientNet(model_name=model_name, output=NUM_CLASSES).to(DEVICE)
+
+        elif model_type == 3:
+            model = ResNet(resnet_name=model_name, in_channels=IN_CHANNELS, num_classes=NUM_CLASSES).to(DEVICE)
 
         # Define the optimizer and the loss function
         optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
@@ -200,6 +217,8 @@ def main():
                 model = MRI_classification_CNN(IN_CHANNELS, NUM_CLASSES, HIDDEN_UNITS, SIZE).to(DEVICE)
             elif model_type == 2:
                 model = EfficientNet(model_name=model_name, output=NUM_CLASSES).to(DEVICE)
+            elif model_type == 3:
+                model = ResNet(resnet_name=model_name, in_channels=IN_CHANNELS, num_classes=NUM_CLASSES).to(DEVICE)
 
             # Define the optimizer and the loss function
             optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
