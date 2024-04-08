@@ -20,24 +20,28 @@ def combine_and_rename_images(data_dir, classes):
         'pituitary_tumor': 0
     }
     # Iterate through training and testing directories
-    for subset in ['Training', 'Testing']:
-        subset_path = os.path.join(data_dir, subset)
-        for class_dir in os.listdir(subset_path):
-            class_path = os.path.join(subset_path, class_dir)
-            for image in os.listdir(class_path):
-                # Get the class of the original image
-                old_image_path = os.path.join(class_path, image)
 
-                # Get the new name of the image
-                new_image_name = f"{classes[class_dir]}_{count_classes[class_dir]}.jpg"
-                count_classes[class_dir] += 1
+    with tqdm(total=2, desc="Combining and renaming images") as pbar:
 
-                # Get the path of the new image
-                new_image_path = os.path.join(combined_dir, new_image_name)
+        for subset in ['Training', 'Testing']:
+            subset_path = os.path.join(data_dir, subset)
+            for class_dir in os.listdir(subset_path):
+                class_path = os.path.join(subset_path, class_dir)
+                for image in os.listdir(class_path):
+                    # Get the class of the original image
+                    old_image_path = os.path.join(class_path, image)
 
-                # Copy the image to the combined directory
-                shutil.copy(old_image_path, new_image_path)
+                    # Get the new name of the image
+                    new_image_name = f"{classes[class_dir]}_{count_classes[class_dir]}.jpg"
+                    count_classes[class_dir] += 1
 
+                    # Get the path of the new image
+                    new_image_path = os.path.join(combined_dir, new_image_name)
+
+                    # Copy the image to the combined directory
+                    shutil.copy(old_image_path, new_image_path)
+
+            pbar.update(1)
     print("Images combined and renamed successfully.")
     return combined_dir
 
@@ -65,29 +69,33 @@ def split_to_train_test(data_dir, train_size, seed=None):
     # Calculate the training and testing sizes
     train_len = {class_idx: int(train_size * len(loaded_images_paths[class_idx])) for class_idx in loaded_images_paths}
 
-    
-    # Move the images to the training directory
-    for class_idx, image_paths in loaded_images_paths.items():
-        count = 0 
-        while train_len[class_idx] >= count:
-            if seed:
-                np.random.seed(seed)
-            # Get a random image
-            random_image = np.random.choice(image_paths)
-            # Get the new image path
-            new_image_path = os.path.join(train_dir, os.path.basename(random_image))
-            # Move the image to the training directory
-            shutil.move(random_image, new_image_path)
-            # Remove the image from the list
-            image_paths.remove(random_image)
-            count += 1
+    with tqdm(total=4, desc="Splitting images into training and testing sets") as pbar:
+        # Move the images to the training directory
+        for class_idx, image_paths in loaded_images_paths.items():
+            count = 0 
+            while train_len[class_idx] >= count:
+                if seed:
+                    np.random.seed(seed)
+                # Get a random image
+                random_image = np.random.choice(image_paths)
+                # Get the new image path
+                new_image_path = os.path.join(train_dir, os.path.basename(random_image))
+                # Move the image to the training directory
+                shutil.move(random_image, new_image_path)
+                # Remove the image from the list
+                image_paths.remove(random_image)
+                count += 1
+                pbar.update(1)
 
-    # Move the remaining images to the testing directory
-    remaining_images = os.listdir(data_dir)
-    for image in remaining_images:
-        image_path = os.path.join(data_dir, image)
-        new_image_path = os.path.join(test_dir, image)
-        shutil.move(image_path, new_image_path)
+            
+        # Move the remaining images to the testing directory
+        remaining_images = os.listdir(data_dir)
+        for image in remaining_images:
+            image_path = os.path.join(data_dir, image)
+            new_image_path = os.path.join(test_dir, image)
+            shutil.move(image_path, new_image_path)
+
+            pbar.update(1)
 
     print("Images split into training and testing sets successfully.")
     return dataset_dir, train_dir, test_dir

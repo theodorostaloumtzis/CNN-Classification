@@ -108,7 +108,7 @@ def main():
         walk_through_dir(combine_dir)
 
         # Create the train and test directories
-        dataset_dir, train_dir, test_dir = split_to_train_test(combine_dir, 0.9)
+        dataset_dir, train_dir, test_dir = split_to_train_test(combine_dir, 0.75, seed=SEED)
 
         # Delete the empty directory
         shutil.rmtree(combine_dir)
@@ -128,6 +128,8 @@ def main():
         # Update the epochs hyperparameter
         hyperparameters['EPOCHS'] = epochs
         EPOCHS = epochs
+
+        set_seeds(SEED)
 
         model = 0
         # Train the model
@@ -186,7 +188,7 @@ def main():
         
 
         # Define the stratified K-Fold Cross Validation
-        skf = StratifiedKFold(n_splits=K_FOLDS, shuffle=True, random_state=SEED)
+        skf = StratifiedKFold(n_splits=K_FOLDS, shuffle=True)
 
 
         fold_results = []
