@@ -5,57 +5,31 @@ from torchvision import transforms
 from timeit import default_timer as timer
 from fold_functions import *
 from plot_functions import *
-from sklearn.model_selection import StratifiedKFold
+import sklearn.model_selection 
 
 def select_model():
     """
     Select the model to train and evaluate.
     """
-    print("Select the model to train and evaluate:")
-    print("1. MRI_classification_CNN")
-    print("2. EfficientNet")
-    print("3. ResNet")
-    model = int(input("Enter the model number: "))
-
-    #do while to check input
-    while model not in [1, 2, 3]:
-        model = int(input("Invalid model number. Please select a valid model number: "))
-    
-    
-    if model == 1:
-        model_name = "MRI_classification_CNN"
-
-    elif model == 2:
-        model_name = input("Enter the model name(b0/b1/b2/b3/b4/b5/b6/b7): ")
-        while model_name not in ["b0", "b1", "b2", "b3", "b4", "b5", "b6", "b7"]:
-            model_name = input("Invalid model name. Please select a valid model name: ")
-    elif model == 3:
-        
-        model_name = input("Enter the model params(resnet18/resnet34/resnet50/resnet101/resnet152): ")
-        while model_name not in ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152"]:
-            model_name = input("Invalid model name. Please select a valid model name: ")
-    else:
-        raise ValueError("Invalid model number. Please select a valid model number.")
-    
     folding = input("Do you want to perform K-Fold Cross Validation? (y/n): ")
 
     while folding not in ["y", "n"]:
         folding = input("Invalid input. Please enter 'y' or 'n': ")
 
-    return model, model_name, folding   
+    return folding   
 
 # Define the main function
 def main():
     """
     Main function to train and evaluate the model.
     """
-    model_type, model_name, folding = select_model()
+    folding = select_model()
 
     # Define the hyperparameters
     DATA_DIR = 'data' # Path to the data directory
     BATCH_SIZE = 32# Batch size for the dataloaders
     IN_CHANNELS = 3 # Number of input channels
-    HIDDEN_UNITS = 16  # Number of hidden units in the fully connected layer
+    HIDDEN_UNITS = 256  # Number of hidden units in the fully connected layer
     NUM_CLASSES = 4 # Number of classes in the dataset
     SIZE = 224 # Size of the images
     LEARNING_RATE = 0.001 # Learning rate for the optimizer
@@ -92,7 +66,7 @@ def main():
         transforms.RandomRotation(RANDOM_ROTATION),
         transforms.ToTensor()
     ])
-    
+
     # Define the classes
     classes = {
     'no_tumor': 0,
@@ -107,55 +81,43 @@ def main():
 
         walk_through_dir(combine_dir)
 
-        # Create the train and test directories
-        dataset_dir, train_dir, test_dir = split_to_train_test(combine_dir, 0.75, seed=SEED)
-
-        # Delete the empty directory
+        dataset_data, dataset_labels = load_data('Combined', transform=transform)
         shutil.rmtree(combine_dir)
 
-        # Load the dataset
-        train_data, train_labels = load_data(train_dir, transform=transform)
-        test_data, test_labels = load_data(test_dir, transform=transform)
+        # Split the dataset into train, validation, and test sets
+        train_data, test_data, train_labels, test_labels = sklearn.model_selection.train_test_split(dataset_data, dataset_labels, test_size=0.1, shuffle=True)
 
-        # Create the train and test loaders
+        train_data, val_data, train_labels, val_labels = sklearn.model_selection.train_test_split(train_data, train_labels, test_size=0.15, shuffle=True)
+
+        print(len(train_data), len(train_labels))
+        print(len(val_data), len(val_labels))
+        print(len(test_data), len(test_labels))
+
+        # Create the dataloaders
         train_loader = DataLoader(CustomDataset(train_data, train_labels), batch_size=BATCH_SIZE, shuffle=True)
+        val_loader = DataLoader(CustomDataset(val_data, val_labels), batch_size=BATCH_SIZE, shuffle=False)
         test_loader = DataLoader(CustomDataset(test_data, test_labels), batch_size=BATCH_SIZE, shuffle=False)
 
-        epochs = int(input("Enter the number of epochs: "))
-        while epochs < 1:
-            epochs = int(input("Invalid number of epochs. Please enter a valid number of epochs: "))
-
-        # Update the epochs hyperparameter
-        hyperparameters['EPOCHS'] = epochs
-        EPOCHS = epochs
-
-        set_seeds(SEED)
-
-        model = 0
         # Train the model
-        if model_type == 1:
-            model = MRI_classification_CNN(IN_CHANNELS, NUM_CLASSES, HIDDEN_UNITS, SIZE).to(DEVICE)
-        elif model_type == 2:
-            model = EfficientNet(model_name=model_name, output=NUM_CLASSES).to(DEVICE)
-
-        elif model_type == 3:
-            model = ResNet(resnet_name=model_name, in_channels=IN_CHANNELS, num_classes=NUM_CLASSES).to(DEVICE)
+        model = MRI_classification_CNN(IN_CHANNELS, NUM_CLASSES, HIDDEN_UNITS, SIZE, 0.3).to(DEVICE)
 
         # Define the optimizer and the loss function
         optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
-        
+
         # Define the loss function
         loss_fn = nn.CrossEntropyLoss()
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=STEP_SIZE, gamma=GAMMA)
 
         start = timer()
 
         results = train(model, 
                         train_loader, 
-                        test_loader, 
+                        val_loader, 
                         loss_fn, 
                         optimizer, 
                         EPOCHS, 
-                        DEVICE)
+                        DEVICE,
+                        scheduler)
 
         end = timer()
         total_time = print_train_time(start, end)
@@ -173,34 +135,29 @@ def main():
         # Plot the confusion matrix
         plot_confusion_matrix(eval_res, classes=classes, model_dir=model_dir)
 
-        shutil.rmtree(dataset_dir)
-        
     elif folding == 'y':
-
         # Pre-Process the dataset
         combine_dir = combine_and_rename_images(DATA_DIR, classes=classes)
-
         walk_through_dir(combine_dir)
-
-
         # Load the dataset
         dataset_data, dataset_labels = load_data(combine_dir, transform=transform)
-        
+        shutil.rmtree(combine_dir)
+        dataset_data, test_data, dataset_labels, test_labels = sklearn.model_selection.train_test_split(dataset_data, dataset_labels, test_size=0.1, shuffle=True)
 
         # Define the stratified K-Fold Cross Validation
-        skf = StratifiedKFold(n_splits=K_FOLDS, shuffle=True)
+        skf = sklearn.model_selection.StratifiedKFold(n_splits=K_FOLDS, shuffle=True)
 
+        #Create the test dataloader
+        test_loader = DataLoader(CustomDataset(test_data, test_labels), batch_size=BATCH_SIZE, shuffle=False)
 
         fold_results = []
         fold_models = []
         fold_eval_results = []
         time_per_fold = []
 
-        
         print("Training the model...")
         for fold, (train_idx, val_idx) in enumerate(skf.split(dataset_data, dataset_labels)):
             print(f"Fold combination: [{fold + 1}/{K_FOLDS}]")
-            
 
             # Create the train and validation loaders
             train_fold_data = extract_elements(dataset_data, train_idx)
@@ -210,17 +167,11 @@ def main():
 
             train_loader = DataLoader(CustomDataset(train_fold_data, train_fold_labels), batch_size=BATCH_SIZE, shuffle=True)
             val_loader = DataLoader(CustomDataset(val_fold_data, val_fold_labels), batch_size=BATCH_SIZE, shuffle=False)
-            
             model = 0
             # Set Seed
             set_seeds(SEED)
             # Define the model
-            if model_type == 1:
-                model = MRI_classification_CNN(IN_CHANNELS, NUM_CLASSES, HIDDEN_UNITS, SIZE).to(DEVICE)
-            elif model_type == 2:
-                model = EfficientNet(model_name=model_name, output=NUM_CLASSES).to(DEVICE)
-            elif model_type == 3:
-                model = ResNet(resnet_name=model_name, in_channels=IN_CHANNELS, num_classes=NUM_CLASSES).to(DEVICE)
+            model = MRI_classification_CNN(IN_CHANNELS, NUM_CLASSES, HIDDEN_UNITS, SIZE, 0.3).to(DEVICE)
 
             # Define the optimizer and the loss function
             optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
@@ -238,7 +189,6 @@ def main():
                             EPOCHS,
                             DEVICE,
                             scheduler)
-            
             end = timer()
 
             total_time = print_train_time(start, end)
@@ -250,14 +200,11 @@ def main():
 
             # Evaluate the model
             eval_res = evaluate(model,
-                                val_loader,
+                                test_loader,
                                 loss_fn,
-                                DEVICE,
-                                )
-            
-            fold_eval_results.append(eval_res)
+                                DEVICE)
 
-        
+            fold_eval_results.append(eval_res)
 
         total_time = print_train_time(start, end)
 
@@ -274,10 +221,7 @@ def main():
         # Plot the loss curves and the confusion matrix for the best model
         plot_loss_curves(fold_results[best_model_idx], model_dir, fold=best_model_idx+1)
         plot_confusion_matrix(fold_eval_results[best_model_idx], classes=classes, model_dir=model_dir, fold=best_model_idx+1)
-        
 
-        shutil.rmtree(combine_dir)
-        
 
 if __name__ == '__main__':
     main()

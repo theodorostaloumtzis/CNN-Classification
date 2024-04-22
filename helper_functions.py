@@ -1,3 +1,4 @@
+import shutil
 import torch
 import os
 import zipfile
@@ -94,6 +95,9 @@ def accuracy_fn(y_true, y_pred):
     correct = torch.eq(y_true, y_pred).sum().item()
     acc = (correct / len(y_pred)) * 100
     return acc
+
+def one_hot_encode(y, num_classes):
+    return torch.eye(num_classes)[y]
 
 # Training step
 def train_step(model: torch.nn.Module,
@@ -349,8 +353,45 @@ def find_classes(directory: str) -> Tuple[List[str], Dict[str, int]]:
     return classes, class_to_idx
 
 
+import os
+from PIL import Image
 
+def convert_png_to_jpg(png_path, jpg_path):
+    img = Image.open(png_path)
+    rgb_img = img.convert('RGB')
+    rgb_img.save(jpg_path, 'JPEG')
 
-
+def combine(classes, source, dest):
+    # Create the destination folder if it doesn't exist
+    os.makedirs(dest, exist_ok=True)
+    
+    # Initialize a counter for the image number
+    image_number = 1
+    
+    for class_name, class_code in classes.items():
+        # Convert class_code to string
+        class_code_str = str(class_code)
         
+        # Get the list of files for this class
+        file_list = os.listdir(os.path.join(source, class_name))
+        
+        # Iterate over the files in this class
+        for file_name in file_list:
+            # Construct the full file path
+            file_path = os.path.join(source, class_name, file_name)
+            
+            # Construct the new file name
+            new_file_name = f"{class_code_str}_{image_number}.jpg"
+            image_number += 1
+            
+            # Construct the destination file path
+            dest_file_path = os.path.join(dest, new_file_name)
+            
+            # If the file is a PNG, convert it to JPG
+            if file_path.lower().endswith('.png'):
+                # Convert the PNG to JPG
+                convert_png_to_jpg(file_path, dest_file_path)
+            else:
+                # Otherwise, just move the file
+                shutil.move(file_path, dest_file_path)
 

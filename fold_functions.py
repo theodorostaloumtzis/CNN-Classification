@@ -13,14 +13,12 @@ def combine_and_rename_images(data_dir, classes):
     combined_dir = 'Combined'
     os.makedirs(combined_dir, exist_ok=True)
 
-    count_classes = {
-        'glioma_tumor': 0,
-        'meningioma_tumor': 0,
-        'no_tumor': 0,
-        'pituitary_tumor': 0
-    }
-    # Iterate through training and testing directories
+    count_classes = classes
 
+    count_classes = {key : 0 for key in count_classes}
+
+
+    # Iterate through training and testing directories
     with tqdm(total=2, desc="Combining and renaming images") as pbar:
 
         for subset in ['Training', 'Testing']:
@@ -40,6 +38,41 @@ def combine_and_rename_images(data_dir, classes):
 
                     # Copy the image to the combined directory
                     shutil.copy(old_image_path, new_image_path)
+
+            pbar.update(1)
+    print("Images combined and renamed successfully.")
+    return combined_dir
+
+
+def combine_and_rename_images_v2(data_dir, classes):
+    # Create a combined directory for both training and testing sets
+
+    combined_dir = 'Combined'
+    os.makedirs(combined_dir, exist_ok=True)
+
+    count_classes = classes
+
+    count_classes = {key : 0 for key in count_classes}
+
+
+    # Iterate through training and testing directories
+    with tqdm(total=2, desc="Combining and renaming images") as pbar:
+
+        for class_dir in os.listdir(data_dir):
+            class_path = os.path.join(data_dir, class_dir)
+            for image in os.listdir(class_path):
+                # Get the class of the original image
+                old_image_path = os.path.join(class_path, image)
+
+                # Get the new name of the image
+                new_image_name = f"{classes[class_dir]}_{count_classes[class_dir]}.jpg"
+                count_classes[class_dir] += 1
+
+                # Get the path of the new image
+                new_image_path = os.path.join(combined_dir, new_image_name)
+
+                # Copy the image to the combined directory
+                shutil.copy(old_image_path, new_image_path)
 
             pbar.update(1)
     print("Images combined and renamed successfully.")
@@ -333,15 +366,16 @@ def load_data(dir, transform=None):
     labels = []
     data = []
 
-    for i in range(len(image_paths)):
-        image_path = image_paths[i]
-        image = Image.open(image_path)
-        class_idx = image_path.name.split('_')[0]
-        labels.append(class_idx)
-        if transform:
-            image = transform(image)
-        data.append(image)
+    with tqdm(total=len(image_paths), desc="Loading images") as pbar:
+        for i in range(len(image_paths)):
+            image_path = image_paths[i]
+            image = Image.open(image_path)
+            class_idx = int(image_path.name.split('_')[0])
+            labels.append(class_idx)
+            if transform:
+                image = transform(image)
+            data.append(image)
+            pbar.update(1)
 
-    labels = np.array(labels).astype(int)
 
     return data, labels
