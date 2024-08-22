@@ -2,7 +2,7 @@ from torch.utils.data import Dataset
 from math import ceil
 import torch.nn as nn
 import torch
-from torchinfo import summary
+#from torchinfo import summary
 
 from collections import OrderedDict
 

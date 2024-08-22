@@ -159,6 +159,7 @@ def train_step(model: torch.nn.Module,
 
 
 # Testing step
+import numpy as np  # Add this line to import NumPy
 def test_step(model: torch.nn.Module,
               data_loader: torch.utils.data.DataLoader,
               loss_fn: torch.nn.Module,
@@ -193,8 +194,8 @@ def test_step(model: torch.nn.Module,
                 test_pred_labels = torch.argmax(torch.softmax(test_pred_logits, dim=1), dim=1)
                 test_acc += (test_pred_labels == y).sum().item() / len(test_pred_labels)
 
-                # Append predictions and targets
-                all_preds.extend(test_pred_labels.cpu().numpy())
+                # Append predicted probabilities and targets
+                all_preds.extend(torch.softmax(test_pred_logits, dim=1).cpu().numpy())
                 all_targets.extend(y.cpu().numpy())
 
                 # Update tqdm progress bar
@@ -206,7 +207,8 @@ def test_step(model: torch.nn.Module,
         test_acc /= len(data_loader)
 
 
-    return test_loss, test_acc, all_preds, all_targets
+    return test_loss, test_acc, np.array(all_preds), np.array(all_targets)
+
 
 
 # Training and testing the model
@@ -217,7 +219,8 @@ def train(model: torch.nn.Module,
           optimizer: torch.optim.Optimizer,
           epochs: int,
           device,
-          scheduler: torch.optim.lr_scheduler = None):
+          scheduler: torch.optim.lr_scheduler = None,
+          early_stopping: bool = True):
     """ Train the model and evaluate on the test set."""
 
     # Track the losses and accuracies
@@ -233,6 +236,9 @@ def train(model: torch.nn.Module,
         'test_all_preds': [[] ],
         'test_all_targets': [[] ]
     }
+    # Save the best model weights
+    best_model_weights = model.state_dict()
+    model_weights = model.state_dict()
 
     # Train the model
     for epoch in range(epochs):
@@ -251,6 +257,18 @@ def train(model: torch.nn.Module,
                                                                             device=device,
                                                                             ep=epoch,
                                                                             EPOCHS=epochs)
+        
+        # Implementing early stopping
+        
+        if epoch > 4 and early_stopping == True:
+            
+            if test_loss > results['test_loss'][-1]:
+                print(f"Early stopping at epoch {epoch+1}")
+                model.load_state_dict(best_model_weights)
+                break
+            else:
+                print(f"Saving model weights at epoch {epoch+1}")
+                best_model_weights = model_weights
 
         # Save the results
         results['train_loss'].append(train_loss)
@@ -267,47 +285,6 @@ def train(model: torch.nn.Module,
         scheduler.step()
 
     return results
-
-# Evaluate the model
-def evaluate(model: torch.nn.Module,
-             data_loader: torch.utils.data.DataLoader,
-             loss_fn: torch.nn.Module,
-             device,
-             eval_epochs: int = 1):
-    """ Evaluate the model on the test set."""
-
-    # Evaluation dict
-    eval_results = {
-        'test_loss': 0,
-        'test_acc': 0,
-        'all_preds': [],
-        'all_targets': []
-    }
-    
-    for i in range(eval_epochs):
-        test_loss, test_acc, all_preds, all_targets = test_step(model=model,
-                                                                data_loader=data_loader,
-                                                                loss_fn=loss_fn,
-                                                                device=device,
-                                                                ep=i,
-                                                                EPOCHS=eval_epochs)
-
-        eval_results['test_loss'] += test_loss
-        eval_results['test_acc'] += test_acc
-        eval_results['all_preds'].extend(all_preds)
-        eval_results['all_targets'].extend(all_targets)
-
-
-    # Average the results
-    eval_results['test_loss'] /= eval_epochs
-    eval_results['test_acc'] /= eval_epochs
-
-    # Print the results
-    print("Evaluation results")
-    print(f"Test Loss: {eval_results['test_loss']:.4f} | Test Acc: {eval_results['test_acc']*100:.2f}%")
-
-    return eval_results
-
 
 # Save the model
 def save_model(module, acc=None, hyperparameters=None, total_time=None, fold=None):
@@ -395,3 +372,86 @@ def combine(classes, source, dest):
                 # Otherwise, just move the file
                 shutil.move(file_path, dest_file_path)
 
+from sklearn.metrics import roc_curve, roc_auc_score, recall_score
+import matplotlib.pyplot as plt
+
+def calculate_metrics(all_preds, all_targets, num_classes):
+    # Calculate ROC and AUC for each class
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    sensitivities = dict()
+    for i in range(num_classes):
+        fpr[i], tpr[i], _ = roc_curve(all_targets == i, all_preds[:, i])
+        roc_auc[i] = roc_auc_score(all_targets == i, all_preds[:, i])
+        sensitivities[i] = recall_score(all_targets, np.argmax(all_preds, axis=1), average=None)[i]
+
+    return fpr, tpr, roc_auc, sensitivities
+
+def plot_roc(fpr, tpr, roc_auc, num_classes):
+    plt.figure()
+    for i in range(num_classes):
+        plt.plot(fpr[i], tpr[i], lw=2, label='Class {0} (AUC = {1:0.2f})'.format(i, roc_auc[i]))
+
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic for Multiclass')
+    plt.legend(loc="lower right")
+    plt.show()
+
+# Evaluate the model
+def evaluate(model: torch.nn.Module,
+             data_loader: torch.utils.data.DataLoader,
+             loss_fn: torch.nn.Module,
+             device,
+             eval_epochs: int = 1):
+    """ Evaluate the model on the test set."""
+
+    # Evaluation dict
+    eval_results = {
+        'test_loss': 0,
+        'test_acc': 0,
+        'all_preds': [],
+        'all_targets': [],
+        'roc_auc': {},
+        'sensitivity': {}
+    }
+    
+    for i in range(eval_epochs):
+        test_loss, test_acc, all_preds, all_targets = test_step(model=model,
+                                                                data_loader=data_loader,
+                                                                loss_fn=loss_fn,
+                                                                device=device,
+                                                                ep=i,
+                                                                EPOCHS=eval_epochs)
+
+        eval_results['test_loss'] += test_loss
+        eval_results['test_acc'] += test_acc
+        eval_results['all_preds'].extend(all_preds)
+        eval_results['all_targets'].extend(all_targets)
+
+    # Average the results
+    eval_results['test_loss'] /= eval_epochs
+    eval_results['test_acc'] /= eval_epochs
+
+    # Calculate ROC, AUC, and sensitivity
+    fpr, tpr, roc_auc, sensitivities = calculate_metrics(np.array(eval_results['all_preds']),
+                                                         np.array(eval_results['all_targets']),
+                                                         num_classes=4)
+
+    eval_results['roc_auc'] = roc_auc
+    eval_results['sensitivity'] = sensitivities
+
+    # Print the results
+    print("Evaluation results")
+    print(f"Test Loss: {eval_results['test_loss']:.4f} | Test Acc: {eval_results['test_acc']*100:.2f}%")
+    for i in range(4):
+        print(f'Class {i} - AUC: {roc_auc[i]:.2f}, Sensitivity: {sensitivities[i]:.2f}')
+
+    # Plot ROC curve
+    plot_roc(fpr, tpr, roc_auc, num_classes=4)
+
+    return eval_results

@@ -43,7 +43,6 @@ def plot_decision_boundary(model: torch.nn.Module, X: torch.Tensor, y: torch.Ten
     plt.xlim(xx.min(), xx.max())
     plt.ylim(yy.min(), yy.max())
 
-
 # Plot linear data or training and test and predictions (optional)
 def plot_predictions(
         train_data, train_labels, test_data, test_labels, predictions=None
@@ -67,9 +66,6 @@ def plot_predictions(
     plt.legend(prop={"size": 14})
 
 
-
-
-
 def print_train_time(start, end, device=None):
     """Prints difference between start and end time.
 
@@ -89,7 +85,6 @@ def print_train_time(start, end, device=None):
     total_time = total_time.split(".")[0]
     print(f"Training time: {total_time}")
     return total_time
-
 
 # Plot loss curves of a model
 def plot_loss_curves(results, model_dir=None, fold=None):
@@ -144,7 +139,6 @@ def plot_loss_curves(results, model_dir=None, fold=None):
             plt.savefig(os.path.join(model_dir, f"accuracy_fold_{fold}.png"))
         else:
             plt.savefig(os.path.join(model_dir, "accuracy.png"))
-
 
 # Pred and plot image function from notebook 04 See creation:
 from typing import List
@@ -314,70 +308,69 @@ def plot_accuracy_per_class(results, classes=None, model_dir=None):
         plt.savefig(model_dir + '/accuracy_per_class.png')
     plt.show()
 
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-def plot_confusion_matrix(results, classes=None, model_dir=None, fold=None):
-    """Plots and saves the confusion matrix.
-
-    Args:
-        results (dict): Dictionary containing training and testing metrics.
-        classes (List[str], optional): List of class names.
-        model_dir (str, optional): Directory to save the plot.
+def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues):
     """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
 
-    all_preds = results['all_preds']
-    all_targets = results['all_targets']
+    plt.figure(figsize=(8, 6))
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
 
-    class_list = list(classes.keys())
+    fmt = '.2f' if normalize else 'd'
+    thresh = cm.max() / 2.
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            plt.text(j, i, format(cm[i, j], fmt),
+                     horizontalalignment="center",
+                     color="white" if cm[i, j] > thresh else "black")
 
-    if not all_preds or not all_targets:
-        print("Prediction and target data are not available.")
-        return
-
-    # Calculate confusion matrix
-    cm = confusion_matrix(all_targets, all_preds)
-
-    # Clacula accuracy per class
-    class_accuracy = cm.diagonal() / cm.sum(axis=1)
-
-    # Plot confusion matrix
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False)
-
-    if class_list:
-        plt.xticks(ticks=np.arange(len(class_list)) + 0.5, labels=class_list)
-        plt.yticks(ticks=np.arange(len(class_list)) + 0.5, labels=class_list)
-        plt.xlabel('Predicted Labels')
-        plt.ylabel('True Labels')
-
-    plt.title('Confusion Matrix')
     plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.show()
 
-    # Save the plot if model directory is provided
-    if model_dir:
-        if fold:
-            plt.savefig(os.path.join(model_dir, f"confusion_matrix_fold_{fold}.png"))
-            plt.close()
-        else:
-            plt.savefig(os.path.join(model_dir, "confusion_matrix.png"))
-            plt.close()
+def sensitivity_specificity(y_true, y_pred):
+    cm = confusion_matrix(y_true, y_pred)
+    sensitivity = np.diag(cm) / np.sum(cm, axis=1)
+    specificity = []
+    for i in range(cm.shape[0]):
+        true_negatives = np.sum(np.delete(np.delete(cm, i, axis=0), i, axis=1))
+        false_positives = np.sum(np.delete(cm, i, axis=0)[:, i])
+        true_positives = cm[i, i]
+        false_negatives = np.sum(np.delete(cm, i, axis=1)[i, :])
+        specificity.append(true_negatives / (true_negatives + false_positives))
+    return sensitivity, specificity
+
+def plot_confusion_matrix_with_sensitivity(cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues):
+    sensitivity, _ = sensitivity_specificity(np.argmax(cm, axis=1), np.argmax(cm, axis=0))
+
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
+
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, cmap=cmap, fmt='.2f', xticklabels=classes, yticklabels=classes)
+    plt.title(title)
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.show()
 
 
-    # Plot the overall accuracy per class
-    plt.figure(figsize=(10, 6))
-    plt.bar(class_list, class_accuracy)
-    plt.xlabel('Classes')
-    plt.ylabel('Accuracy')
-    plt.title('Accuracy per Class')
-    plt.tight_layout()
-    plt.ylim(0, 1)
-    plt.grid(axis='y')
-
-    if model_dir:
-        if fold:
-            plt.savefig(os.path.join(model_dir, f"accuracy_per_class_fold_{fold}.png"))
-            plt.close()
-        
-        else:
-            plt.savefig(os.path.join(model_dir, 'accuracy_per_class.png'))
-            plt.close()
 
