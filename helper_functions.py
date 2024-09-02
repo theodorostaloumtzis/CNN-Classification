@@ -236,6 +236,8 @@ def train(model: torch.nn.Module,
         'test_all_preds': [[] ],
         'test_all_targets': [[] ]
     }
+
+    count = 0
     # Save the best model weights
     best_model_weights = model.state_dict()
     model_weights = model.state_dict()
@@ -260,15 +262,21 @@ def train(model: torch.nn.Module,
         
         # Implementing early stopping
         
-        if epoch > 4 and early_stopping == True:
+        if early_stopping == True and train_acc > 0.95:
             
-            if test_loss > results['test_loss'][-1]:
+            if test_loss > results['test_loss'][-1] :
+                count +=1
+
+            elif count == 2:
                 print(f"Early stopping at epoch {epoch+1}")
                 model.load_state_dict(best_model_weights)
                 break
+
             else:
                 print(f"Saving model weights at epoch {epoch+1}")
                 best_model_weights = model_weights
+
+            
 
         # Save the results
         results['train_loss'].append(train_loss)

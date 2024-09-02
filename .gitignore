@@ -1,6 +1,8 @@
 .vscode/
+.conda/
 Combined/
 Dataset/
 models/
 __pycache__/
 myenv/
+effnet/
