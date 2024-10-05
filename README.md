@@ -58,11 +58,6 @@ The custom CNN model consists of several layers of convolutions, batch normaliza
    - Download the [Brain Tumor Classification (MRI)](https://www.kaggle.com/datasets/sartajbhuvaji/brain-tumor-classification-mri) dataset from Kaggle.
    - Extract the dataset into a `data/` directory.
 
-4. Run the Jupyter notebooks for training and evaluation:
-   ```bash
-   jupyter notebook
-   ```
-   - Open the notebook files inside the `notebooks/` directory and follow the instructions to train and evaluate the model.
 
 ## Contributors
 
