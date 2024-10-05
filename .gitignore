@@ -1,9 +1,0 @@
-.vscode/
-.conda/
-Combined/
-Dataset/
-models/
-__pycache__/
-venv/
-effnet/
-pytorch/
