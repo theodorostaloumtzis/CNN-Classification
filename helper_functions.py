@@ -220,10 +220,11 @@ def train(model: torch.nn.Module,
           epochs: int,
           device,
           scheduler: torch.optim.lr_scheduler = None,
-          early_stopping: bool = True):
+          early_stopping: bool = True,
+          times_not_optimizing: int = 1,
+          acc_target: float = 0.95):
     """ Train the model and evaluate on the test set."""
 
-    # Track the losses and accuracies
     results = {
         'train_loss': [],
         'train_acc': [],
@@ -233,16 +234,15 @@ def train(model: torch.nn.Module,
         'all_targets': [],
         'train_all_preds': [[]],
         'train_all_targets': [[]],
-        'test_all_preds': [[] ],
-        'test_all_targets': [[] ]
+        'test_all_preds': [[]],
+        'test_all_targets': [[]]
     }
 
     count = 0
-    # Save the best model weights
     best_model_weights = model.state_dict()
-    model_weights = model.state_dict()
+    best_test_loss = float('inf')
+    wanted_acc = False
 
-    # Train the model
     for epoch in range(epochs):
         train_loss, train_acc, train_all_preds, train_all_targets = train_step(model=model,
                                                                                 data_loader=train_loader,
@@ -252,7 +252,6 @@ def train(model: torch.nn.Module,
                                                                                 ep=epoch,
                                                                                 EPOCHS=epochs)
 
-        # Evaluate the model on the test set
         test_loss, test_acc, test_all_preds, test_all_targets = test_step(model=model,
                                                                             data_loader=test_loader,
                                                                             loss_fn=loss_fn,
@@ -260,23 +259,26 @@ def train(model: torch.nn.Module,
                                                                             ep=epoch,
                                                                             EPOCHS=epochs)
         
-        # Implementing early stopping
-        
-        if early_stopping == True and train_acc > 0.95:
-            
-            if test_loss > results['test_loss'][-1] :
-                count +=1
+        if train_acc > acc_target:
+            wanted_acc = True
+            print("Reached Wanted Accuracy")
+        else:
+            wanted_acc = False
 
-            elif count == 2:
+
+        if early_stopping and wanted_acc:
+            if test_loss < best_test_loss:
+                best_test_loss = test_loss
+                best_model_weights = model.state_dict()
+                print(f"Saving Best weights and reseting the counter to 0 from {count}")
+                count = 0  # Reset count when there is an improvement
+            else:
+                count += 1  # Increment count if no improvement
+
+            if count >= times_not_optimizing:
                 print(f"Early stopping at epoch {epoch+1}")
                 model.load_state_dict(best_model_weights)
                 break
-
-            else:
-                print(f"Saving model weights at epoch {epoch+1}")
-                best_model_weights = model_weights
-
-            
 
         # Save the results
         results['train_loss'].append(train_loss)
@@ -288,11 +290,12 @@ def train(model: torch.nn.Module,
         results['test_all_preds'].append(test_all_preds)
         results['test_all_targets'].append(test_all_targets)
 
-    # Step the scheduler
     if scheduler:
         scheduler.step()
 
     return results
+
+
 
 # Save the model
 def save_model(module, acc=None, hyperparameters=None, total_time=None, fold=None):
@@ -396,19 +399,7 @@ def calculate_metrics(all_preds, all_targets, num_classes):
 
     return fpr, tpr, roc_auc, sensitivities
 
-def plot_roc(fpr, tpr, roc_auc, num_classes):
-    plt.figure()
-    for i in range(num_classes):
-        plt.plot(fpr[i], tpr[i], lw=2, label='Class {0} (AUC = {1:0.2f})'.format(i, roc_auc[i]))
 
-    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic for Multiclass')
-    plt.legend(loc="lower right")
-    plt.show()
 
 # Evaluate the model
 def evaluate(model: torch.nn.Module,
@@ -459,7 +450,63 @@ def evaluate(model: torch.nn.Module,
     for i in range(4):
         print(f'Class {i} - AUC: {roc_auc[i]:.2f}, Sensitivity: {sensitivities[i]:.2f}')
 
-    # Plot ROC curve
-    plot_roc(fpr, tpr, roc_auc, num_classes=4)
-
     return eval_results
+
+
+import pandas as pd
+import pathlib
+from tqdm import tqdm
+
+def load_data_to_dataframe(dir):
+    # Load the image paths to numpy array
+    image_paths = list(pathlib.Path(dir).glob('*.jpg'))
+
+    # Create a dataframe to store image paths and labels
+    data = {'image_path': [], 'label': []}
+
+    with tqdm(total=len(image_paths), desc="Loading images") as pbar:
+        for image_path in image_paths:
+            class_idx = int(image_path.name.split('_')[0])  # Extract label from file name
+            data['image_path'].append(str(image_path))  # Store path as string
+            data['label'].append(class_idx)
+            pbar.update(1)
+
+    # Create a pandas dataframe from the data
+    df = pd.DataFrame(data)
+    return df
+
+def combine_and_rename_images(data_dir, classes):
+    # Create a combined directory for both training and testing sets
+
+    combined_dir = 'Combined'
+    os.makedirs(combined_dir, exist_ok=True)
+
+    count_classes = classes
+
+    count_classes = {key : 0 for key in count_classes}
+
+
+    # Iterate through training and testing directories
+    with tqdm(total=2, desc="Combining and renaming images") as pbar:
+
+        for subset in ['Training', 'Testing']:
+            subset_path = os.path.join(data_dir, subset)
+            for class_dir in os.listdir(subset_path):
+                class_path = os.path.join(subset_path, class_dir)
+                for image in os.listdir(class_path):
+                    # Get the class of the original image
+                    old_image_path = os.path.join(class_path, image)
+
+                    # Get the new name of the image
+                    new_image_name = f"{classes[class_dir]}_{count_classes[class_dir]}.jpg"
+                    count_classes[class_dir] += 1
+
+                    # Get the path of the new image
+                    new_image_path = os.path.join(combined_dir, new_image_name)
+
+                    # Copy the image to the combined directory
+                    shutil.copy(old_image_path, new_image_path)
+
+            pbar.update(1)
+    print("Images combined and renamed successfully.")
+    return combined_dir

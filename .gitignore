@@ -4,5 +4,7 @@ Combined/
 Dataset/
 models/
 __pycache__/
-myenv/
+venv/
 effnet/
+pytorch/
+data/

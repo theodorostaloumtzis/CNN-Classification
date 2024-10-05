@@ -372,5 +372,61 @@ def plot_confusion_matrix_with_sensitivity(cm, classes, normalize=False, title='
     plt.xlabel('Predicted label')
     plt.show()
 
+import torch
+import torch.nn as nn
+import torchvision.models as models
+from sklearn.metrics import roc_curve, roc_auc_score, recall_score, precision_score, f1_score
+import numpy as np
+
+def plot_metrics(eval_res, classes):
+    # Inverting the dictionary to map from indices to class names
+    idx_to_class = {v: k for k, v in classes.items()}
+
+    all_preds = eval_res['all_preds']
+    all_labels = eval_res['all_targets']
+
+    all_preds = np.array(all_preds)
+    all_labels = np.array(all_labels)
+
+    print(f'all_preds shape: {all_preds.shape}')  # Should be (num_samples, NUM_CLASSES)
+    print(f'all_labels shape: {all_labels.shape}')  # Should be (num_samples,)
+
+    # Calculate ROC and AUC for each class
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    for i in range(len(classes)):
+        fpr[i], tpr[i], _ = roc_curve(all_labels == i, all_preds[:, i])
+        roc_auc[i] = roc_auc_score(all_labels == i, all_preds[:, i])
+
+    # Calculate the sensitivity (recall) for each class
+    sensitivities = recall_score(all_labels, np.argmax(all_preds, axis=1), average=None)
+
+    # Calculate precision and F1 score for each class
+    precisions = precision_score(all_labels, np.argmax(all_preds, axis=1), average=None)
+    f1_scores = f1_score(all_labels, np.argmax(all_preds, axis=1), average=None)
+
+    # Printing the metrics with class names
+    for i in range(len(classes)):
+        class_name = idx_to_class[i]
+        print(f'Class {class_name} - AUC: {roc_auc[i]:.2f}, Precision: {precisions[i]:.2f}, '
+              f'Recall (Sensitivity): {sensitivities[i]:.2f}, F1 Score: {f1_scores[i]:.2f}')
+
+    # Plotting the ROC curve for each class (optional)
+    import matplotlib.pyplot as plt
+
+    plt.figure()
+    for i in range(len(classes)):
+        plt.plot(fpr[i], tpr[i], lw=2, label='Class {0} (AUC = {1:0.2f})'.format(idx_to_class[i], roc_auc[i]))
+
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic for Multiclass')
+    plt.legend(loc="lower right")
+    plt.show()
+
 
 
